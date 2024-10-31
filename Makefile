@@ -1,2 +1,18 @@
+MANAGE := poetry run
+
+.PHONY: migrate
+
+install:
+	poetry install
+
+start:
+	${MANAGE} start
+
 lint:
-	poetry run flake8 .
+	${MANAGE} flake8 .
+
+migrate:
+	${MANAGE} alembic revision --autogenerate
+
+upgrade_head:
+	${MANAGE} alembic upgrade head
