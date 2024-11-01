@@ -1,7 +1,8 @@
-from aiogram import Router, F
+from aiogram import Router
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message
 import re
+from edu_meet_bot.session.views import main_menu_view
 
 
 router = Router(name="edu_meet_bot")
@@ -12,7 +13,8 @@ async def start(message: Message) -> None:
 
     await message.answer(
         "Привет! Я бот для планирования уроков с репетитором. "
-        "Отправьте / help, чтобы увидеть мои команды."
+        "Отправьте / help, чтобы увидеть мои команды.",
+        reply_markup=main_menu_view(),
     )
 
 
