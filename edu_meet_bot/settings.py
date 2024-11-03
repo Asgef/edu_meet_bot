@@ -12,6 +12,8 @@ load_dotenv()
 TOKEN = os.getenv('TOKEN')
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
+PRICE = os.getenv('PRICE')
+
 db = Database(DATABASE_URL)
 
 # moscow_tz = pytz.timezone('Europe/Moscow')
