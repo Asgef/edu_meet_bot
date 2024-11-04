@@ -1,16 +1,13 @@
-from datetime import datetime
+from datetime import datetime, time
 from decimal import Decimal
-from secrets import choice
-from typing import List
-from sqlalchemy import Enum, Time, ForeignKey, Date, DateTime
+from sqlalchemy import Enum, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
-from sqlalchemy.ext.declarative import declarative_base
 from edu_meet_bot.base_model import BaseModel
 
 
 class User(BaseModel):
-    __tablename__ = "users"
+    __tablename__ = "user"
 
     id: Mapped[int] = mapped_column(primary_key=True)
     tg_id: Mapped[int] = mapped_column(unique=True)
@@ -35,7 +32,7 @@ class Slot(BaseModel):
     slot_time: Mapped[str] = mapped_column(nullable=False)
     day_of_week: Mapped[str] = mapped_column(
         Enum(*CHOOSES, name='day_of_week_enum'), nullable=False)
-    hour: Mapped[Time] = mapped_column(nullable=False)
+    hour: Mapped[time] = mapped_column(nullable=False)
     is_available: Mapped[bool] = mapped_column(default=True)
     is_recurring: Mapped[bool] = mapped_column(default=False)
 
@@ -58,7 +55,7 @@ class AcademicSubject(BaseModel):
 
 
 class Order(BaseModel):
-    __tablename__ = 'orders'
+    __tablename__ = 'order'
 
     CHOICES = ('pending', 'accepted', 'declined', 'canceled')
 
@@ -71,9 +68,9 @@ class Order(BaseModel):
         Enum(*CHOICES, name='status_enum'), nullable=False
     )
     comment: Mapped[str] = mapped_column(nullable=True)
-    date: Mapped[Date] = mapped_column(nullable=False)
-    created_at: Mapped[DateTime] = mapped_column(default=func.now())
-    updated_at: Mapped[DateTime] = mapped_column(onupdate=func.now())
+    date: Mapped[datetime] = mapped_column(nullable=False)
+    created_at: Mapped[datetime] = mapped_column(default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(onupdate=func.now())
 
     # Relationships
     student = relationship("User", foreign_keys=[student_id])
@@ -85,4 +82,3 @@ class Order(BaseModel):
             f"<Order(id={self.id}, student_id={self.student_id}, "
             f"slot_id={self.slot_id})>"
         )
-

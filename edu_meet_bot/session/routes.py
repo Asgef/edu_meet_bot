@@ -3,7 +3,6 @@ from aiogram.filters import CommandStart, Command
 from aiogram.types import Message
 import re
 from edu_meet_bot.session.views import main_menu_view, lesson_registration_menu
-import json
 
 router = Router(name="edu_meet_bot")
 
@@ -32,5 +31,7 @@ async def registration_menu(message: Message, bot=Bot):
 
 @router.message()
 async def tutor_message(message: Message) -> None:
-    if re.search(r'(егэ|математик|информатик)', message.text, re.IGNORECASE):
+    if re.search(r'('
+                 r'егэ|математик|информатик)', message.text, re.IGNORECASE
+                 ):
         await message.answer("Я помогу тебе к ЕГЭ по математике и информатике")
