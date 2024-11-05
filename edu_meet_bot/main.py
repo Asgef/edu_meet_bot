@@ -2,6 +2,7 @@ from edu_meet_bot import settings
 import logging
 from aiogram import Bot, Dispatcher
 from edu_meet_bot.session.routes import router as tutor_router
+from edu_meet_bot.session.middleware import UserActivityMiddleware
 
 
 async def start_bot() -> None:
@@ -15,6 +16,7 @@ async def start_bot() -> None:
 
     bot = Bot(token=settings.TOKEN)
     dp = Dispatcher()
+    dp.message.middleware(UserActivityMiddleware())
     dp.include_router(tutor_router)
     # удаляет вебхук бота и сбрасывает все ожидающие обновления
     # await bot.delete_webhook(drop_pending_updates=True)
