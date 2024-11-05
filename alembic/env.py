@@ -29,7 +29,6 @@ if config.config_file_name is not None:
 # for 'autogenerate' support
 # from myapp import mymodel
 target_metadata = BaseModel.metadata
-print(target_metadata.tables.keys())
 
 
 # other values from the config, defined by the needs of env.py,

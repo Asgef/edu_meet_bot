@@ -19,6 +19,7 @@ argparse = "^1.4.0"
 
 [tool.poetry.scripts]
 start = "edu_meet_bot.scripts.run_bot:main"
+add_admin = "edu_meet_bot.scripts.add_admin:main"
 
 
 [tool.poetry.group.dev.dependencies]

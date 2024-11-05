@@ -1,10 +1,10 @@
 from edu_meet_bot.admin.errors import (
 UserAlreadyAdmin, UserAlreadyIsNotAdmin, UserNeverBeenAdmin
 )
-from edu_meet_bot.session.models import User
 from edu_meet_bot.admin.repo import (change_user_admin_status_by_id,
                                  get_user_by_tg_id, is_user_admin_by_tg_id)
 from edu_meet_bot.db import async_session
+from edu_meet_bot.errors import UserNotFoundError
 
 
 async def is_user_admin(tg_id: int) -> bool:
@@ -22,12 +22,11 @@ async def make_user_admin(tg_id: int):
                 raise UserAlreadyAdmin()
 
             await session.execute(change_user_admin_status_by_id(
-                user.id, True))
+                user.tg_id, True))
+            await session.commit()
             return
 
-        new_user = User(user_id=tg_id)
-        session.add(new_user)
-        await session.commit()
+        raise UserNotFoundError()
 
 
 async def delete_user_from_admins(tg_id: int):

@@ -19,7 +19,14 @@ async def touch_user(tg_id: int, username: str, first_name: str):
         #  TODO: Следует продумать логику обновления активности пользователя
         #  Возможно следует реагировать на некоторые события
         #  или если будет Redis использовать его
-        current_time = datetime.now(timezone.utc)  # Текущее время в UTC
-        if current_time - user.last_activity > timedelta(minutes=15):
-            user.last_activity = func.now()
-            await session.commit()
+
+        # Получаем текущее время и сравниваем с last_activity
+        current_time = datetime.now(timezone.utc)
+        last_activity = user.last_activity.replace(tzinfo=timezone.utc)\
+            if user.last_activity.tzinfo is None\
+            else user.last_activity
+
+        # Проверяем, нужно ли обновлять last_activity
+        if current_time - last_activity > timedelta(minutes=15):
+            user.last_activity = func.now()  # Обновляем last_activity
+            await session.commit()  # Коммит только если last_activity обновляется

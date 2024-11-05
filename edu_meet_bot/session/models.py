@@ -1,5 +1,5 @@
 from datetime import datetime, time
-from sqlalchemy import Enum, ForeignKey, BigInteger, String
+from sqlalchemy import Enum, ForeignKey, BigInteger, String, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from edu_meet_bot.base_model import BaseModel
@@ -14,10 +14,10 @@ class User(BaseModel):
     first_name: Mapped[str] = mapped_column(unique=True, nullable=True)
     is_admin: Mapped[bool] = mapped_column(default=False)
     timezone: Mapped[str] = mapped_column(String, default="Europe/Moscow")
-    last_activity: Mapped[datetime] = mapped_column(default=func.now())
-    created_at: Mapped[datetime] = mapped_column(default=func.now())
+    last_activity: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now())
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now())
     updated_at: Mapped[datetime] = mapped_column(
-        default=func.now(), onupdate=func.now()
+        DateTime(timezone=True), default=func.now(), onupdate=func.now()
     )
 
     def __repr__(self):
