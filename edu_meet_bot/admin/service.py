@@ -9,6 +9,7 @@ from edu_meet_bot.errors import UserNotFoundError
 
 async def is_user_admin(tg_id: int) -> bool:
     async with async_session() as session:
+        # TODO: Реализовать кэширование
         result = await session.execute(is_user_admin_by_tg_id(tg_id))
         return result.scalar()  # type: ignore
 

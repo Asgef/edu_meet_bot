@@ -3,12 +3,15 @@ from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import KeyboardButton
 
 
-def main_menu_view():
+def main_menu_view(is_admin: bool = False):
     kb = ReplyKeyboardBuilder()
     kb.add(KeyboardButton(text="Записаться"))
     kb.add(KeyboardButton(text="Мои занятия"))
-    kb.add(KeyboardButton(text="О Нике"))
+    kb.button(text="О Нике")
     kb.add(KeyboardButton(text="Задать Нике вопрос"))
+
+    if is_admin:
+        kb.button(text="Админ панель")
 
     kb.adjust(1, 3)
     return kb.as_markup(resize_keyboard=True)

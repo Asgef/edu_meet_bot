@@ -2,8 +2,10 @@ from sqlalchemy import exists, select, update, Exists, Update, Select
 from edu_meet_bot.session.models import User
 
 
-def is_user_admin_by_tg_id( tg_id: int) -> Exists:
-    return exists().where(User.tg_id == tg_id, User.is_admin)
+def is_user_admin_by_tg_id( tg_id: int) -> Select:
+    return exists(User.id).where(
+        User.tg_id == tg_id, User.is_admin
+    ).select()
 
 
 
