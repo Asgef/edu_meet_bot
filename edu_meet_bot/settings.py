@@ -1,5 +1,6 @@
 import os
 from dotenv import load_dotenv
+from pathlib import Path
 
 
 load_dotenv()
@@ -11,5 +12,9 @@ DEBUG = os.getenv('DEBUG', 'False') == 'True'
 
 PRICE = os.getenv('PRICE')
 
-# moscow_tz = pytz.timezone('Europe/Moscow')
-# now_in_moscow = datetime.now(moscow_tz)
+
+BASE_DIR = Path(__file__).resolve().parent.parent
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media_files')
+
+TUTOR_PHOTO = os.getenv('TUTOR_PHOTO')
+ABOUT_MASSAGE = os.getenv('ABOUT_MASSAGE')

@@ -1,5 +1,6 @@
 venv/
 dist/
+media_files/
 **/.idea/
 __pycache__/
 
