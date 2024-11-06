@@ -14,8 +14,12 @@ class User(BaseModel):
     first_name: Mapped[str] = mapped_column(unique=True, nullable=True)
     is_admin: Mapped[bool] = mapped_column(default=False)
     timezone: Mapped[str] = mapped_column(String, default="Europe/Moscow")
-    last_activity: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now())
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=func.now())
+    last_activity: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now()
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now()
+    )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), onupdate=func.now()
     )

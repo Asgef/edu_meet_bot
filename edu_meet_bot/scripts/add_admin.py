@@ -11,7 +11,7 @@ parser.add_argument("id", type=int)
 
 
 async def add_admin(admin_id: int):
-    async with async_session() as session:
+    async with async_session() as session:  # noqa
         try:
             await make_user_admin(admin_id)
         except UserAlreadyAdmin:

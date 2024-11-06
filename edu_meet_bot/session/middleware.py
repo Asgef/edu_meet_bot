@@ -5,7 +5,6 @@ from edu_meet_bot.admin.service import is_user_admin
 from edu_meet_bot.session.service import touch_user
 
 
-
 class UserActivityMiddleware(BaseMiddleware):
     async def __call__(
         self,

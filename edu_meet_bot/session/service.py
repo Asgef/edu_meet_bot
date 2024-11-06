@@ -29,4 +29,5 @@ async def touch_user(tg_id: int, username: str, first_name: str):
         # Проверяем, нужно ли обновлять last_activity
         if current_time - last_activity > timedelta(minutes=15):
             user.last_activity = func.now()  # Обновляем last_activity
-            await session.commit()  # Коммит только если last_activity обновляется
+            await session.commit()
+            # Коммит только если last_activity обновляется

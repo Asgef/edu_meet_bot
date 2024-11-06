@@ -31,12 +31,10 @@ async def help(message: Message) -> None:
 @router.message(F.text == "Записаться")
 async def registration_menu(message: Message, bot=Bot):
     await message.answer("Заходи", reply_markup=lesson_registration_menu())
-    # json_str = json.dumps(message.dict(), default=str)
-    # print(json_str)
 
 
 @router.message(F.text == "О Нике")
-async def about(message: Message, bot=Bot):
+async def get_about_massage(message: Message, bot=Bot):
     photo_file: str = os.path.join(
         str(settings.MEDIA_ROOT), str(settings.TUTOR_PHOTO)
     )
@@ -44,10 +42,9 @@ async def about(message: Message, bot=Bot):
     await message.answer_photo(FSInputFile(photo_file), caption=caption)
 
 
-
 @router.message()
 async def tutor_message(message: Message) -> None:
-    if re.search(r'('
-                 r'егэ|математик|информатик)', message.text, re.IGNORECASE
-                 ):
+    if message.text and re.search(
+            r'(егэ|математик|информатик)', message.text, re.IGNORECASE
+    ):
         await message.answer("Я помогу тебе к ЕГЭ по математике и информатике")

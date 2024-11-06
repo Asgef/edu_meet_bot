@@ -1,8 +1,9 @@
 from edu_meet_bot.admin.errors import (
-UserAlreadyAdmin, UserAlreadyIsNotAdmin, UserNeverBeenAdmin
+    UserAlreadyAdmin, UserAlreadyIsNotAdmin, UserNeverBeenAdmin
 )
-from edu_meet_bot.admin.repo import (change_user_admin_status_by_id,
-                                 get_user_by_tg_id, is_user_admin_by_tg_id)
+from edu_meet_bot.admin.repo import (
+    change_user_admin_status_by_id, get_user_by_tg_id, is_user_admin_by_tg_id
+)
 from edu_meet_bot.db import async_session
 from edu_meet_bot.errors import UserNotFoundError
 
