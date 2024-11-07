@@ -4,6 +4,9 @@ from aiogram.types import Message
 from edu_meet_bot.support.fsm import StepsQuestionMessage
 from aiogram.fsm.context import FSMContext
 from edu_meet_bot import settings
+from edu_meet_bot.support.utils import extract_arg
+from edu_meet_bot.support.errors import InvalidUserIdError
+import logging
 # from edu_meet_bot.debug.utils import log_json_data
 
 router = Router(name="edu_meet_bot/support")
@@ -21,7 +24,7 @@ async def get_chat_id(message: Message):
 
 
 @router.message(F.text == "Связаться с репетитором")
-async def get_question_message(message: Message, state: FSMContext) -> None:
+async def get_client_question(message: Message, state: FSMContext) -> None:
     await message.answer(
         'Задайте ваш вопрос репетитору, он ответит как только освободится:'
     )
@@ -29,7 +32,7 @@ async def get_question_message(message: Message, state: FSMContext) -> None:
 
 
 @router.message(StepsQuestionMessage.GET_MASSAGE)
-async def send_question_massage(
+async def send_client_question_massage(
         message: Message, state: FSMContext, bot: Bot
 ) -> None:
     user = message.from_user.username or message.from_user.first_name
@@ -62,3 +65,25 @@ async def send_question_massage(
         parse_mode='Markdown'
     )
     await state.clear()
+
+
+@router.message(Command("ответ"))
+async def get_admin_answer(message: Message, bot: Bot) -> None:
+    try:
+        chat_id, answer = extract_arg(message.text)
+
+        await message.reply('✅ Вы успешно ответили на вопрос!')
+        await bot.send_message(
+            chat_id,
+            f"✉ Новое уведомление!\nОтвет от тех.поддержки:\n\n`{answer}`",
+            parse_mode='Markdown'
+        )
+        return
+    except Exception as e:
+        chat_id = message.chat.id
+        await bot.send_message(
+            settings.SUPPORT_CHAT_ID,
+            f"Случилась *ошибка* в чате *{chat_id}*\n"
+            f"Статус ошибки: `{e}`", # TODO: Продумать ошибки
+            parse_mode='Markdown'
+        )
