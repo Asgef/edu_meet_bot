@@ -18,3 +18,6 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media_files')
 
 TUTOR_PHOTO = os.getenv('TUTOR_PHOTO')
 ABOUT_MASSAGE = os.getenv('ABOUT_MASSAGE')
+
+
+SUPPORT_CHAT_ID = os.getenv('SUPPORT_CHAT_ID')
