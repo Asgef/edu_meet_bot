@@ -1,13 +1,13 @@
 from aiogram import Router, F, Bot
 from aiogram.filters import Command
-from aiogram.types import Message
-from edu_meet_bot.support.fsm import StepsQuestionMessage
+from aiogram.types import Message, CallbackQuery
+from edu_meet_bot.support.fsm import StepsQuestionMessage, StepsAnswerMessage
 from aiogram.fsm.context import FSMContext
 from edu_meet_bot import settings
-from edu_meet_bot.support.utils import extract_arg
-from edu_meet_bot.support.errors import InvalidUserIdError
-import logging
+from edu_meet_bot.support.utils import escape_markdown
+from edu_meet_bot.support.views import answer_button
 # from edu_meet_bot.debug.utils import log_json_data
+
 
 router = Router(name="edu_meet_bot/support")
 
@@ -31,13 +31,31 @@ async def get_client_question(message: Message, state: FSMContext) -> None:
     await state.set_state(StepsQuestionMessage.GET_MASSAGE)
 
 
+@router.callback_query(F.data.startswith('answer|'))
+async def on_answer_click(callback: CallbackQuery, state: FSMContext) -> None:
+    callback_data = callback.data.split('|')
+    user_id, user_name = int(callback_data[1]), callback_data[2]
+    await state.update_data(user_id=user_id, user_name=user_name)
+    await state.set_state(StepsAnswerMessage.GET_MASSAGE)
+    await callback.message.answer(
+        f"Введите текст ответа для пользователя {user_name}.",
+        parse_mode='Markdown'
+    )
+    await callback.answer()
+
+
+
 @router.message(StepsQuestionMessage.GET_MASSAGE)
 async def send_client_question_massage(
         message: Message, state: FSMContext, bot: Bot
 ) -> None:
-    user = message.from_user.username or message.from_user.first_name
+    user_name = message.from_user.username or message.from_user.first_name
     question_text = message.caption\
         if message.content_type == 'photo' else message.text
+
+    # Обработка спецсимволов для Markdown (базового)
+    user_name = escape_markdown(user_name)
+    question_text = escape_markdown(question_text)
 
     if message.content_type == 'photo' and message.photo:
         photo_id = message.photo[-1].file_id
@@ -45,19 +63,21 @@ async def send_client_question_massage(
             settings.SUPPORT_CHAT_ID,
             photo=photo_id,
             caption=(
-                f"✉ | Новый вопрос\nОт: {user}\nВопрос: `{question_text}`\n\n"
-                f"📝 Чтобы ответить на вопрос введите `/ответ {message.chat.id} Ваш ответ`"  # noqa E501
+                f"✉ | Новый вопрос\nОт: {user_name}\nВопрос: `{question_text}`\n\n"
+                f"📝 👇"
             ),
-            parse_mode='Markdown'
+            parse_mode='Markdown',
+            reply_markup=answer_button(message.from_user.id, user_name)
         )
     else:
         await bot.send_message(
             settings.SUPPORT_CHAT_ID,
             text=(
-                f"✉ | Новый вопрос\nОт: {user}\nВопрос: `{question_text}`\n\n"
-                f"📝 Чтобы ответить на вопрос введите `/ответ {message.chat.id} Ваш ответ`"  # noqa E501
+                f"✉ | Новый вопрос\nОт: {user_name}\nВопрос: `{question_text}`\n\n"
+                f"📝 👇"
             ),
-            parse_mode='Markdown'
+            parse_mode='Markdown',
+            reply_markup=answer_button(message.from_user.id, user_name)
         )
 
     await message.reply(
@@ -67,23 +87,24 @@ async def send_client_question_massage(
     await state.clear()
 
 
-@router.message(Command("ответ"))
-async def get_admin_answer(message: Message, bot: Bot) -> None:
-    try:
-        chat_id, answer = extract_arg(message.text)
+@router.message(StepsAnswerMessage.GET_MASSAGE)
+async def get_admin_answer(message: Message, state: FSMContext, bot: Bot) -> None:
+    data = await state.get_data()
+    user_id = data.get('user_id')
+    user_name = data.get('user_name')
+    answer = message.text
 
-        await message.reply('✅ Вы успешно ответили на вопрос!')
-        await bot.send_message(
-            chat_id,
-            f"✉ Новое уведомление!\nОтвет от тех.поддержки:\n\n`{answer}`",
-            parse_mode='Markdown'
-        )
-        return
-    except Exception as e:
-        chat_id = message.chat.id
-        await bot.send_message(
-            settings.SUPPORT_CHAT_ID,
-            f"Случилась *ошибка* в чате *{chat_id}*\n"
-            f"Статус ошибки: `{e}`", # TODO: Продумать ошибки
-            parse_mode='Markdown'
-        )
+    # Отправляем ответ пользователю
+    await bot.send_message(
+        user_id,
+        f"✉ Новое сообщение!\nОтвет от репетитора:\n\n`{answer}`",
+         parse_mode='Markdown'
+    )
+
+    # Уведомляем администратора об успешной отправке
+    await message.answer(
+        f"✅ Вы успешно ответили пользователю {user_name}.",
+        parse_mode='Markdown'
+    )
+    await state.clear()  # Очищаем состояние после отправки ответа
+
