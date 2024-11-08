@@ -44,18 +44,17 @@ async def on_answer_click(callback: CallbackQuery, state: FSMContext) -> None:
     await callback.answer()
 
 
-
 @router.message(StepsQuestionMessage.GET_MASSAGE)
 async def send_client_question_massage(
         message: Message, state: FSMContext, bot: Bot
 ) -> None:
     user_name = message.from_user.username or message.from_user.first_name
-    question_text = message.caption\
+    question = message.caption\
         if message.content_type == 'photo' else message.text
 
     # Обработка спецсимволов для Markdown (базового)
     user_name = escape_markdown(user_name)
-    question_text = escape_markdown(question_text)
+    question = escape_markdown(question)
 
     if message.content_type == 'photo' and message.photo:
         photo_id = message.photo[-1].file_id
@@ -63,7 +62,7 @@ async def send_client_question_massage(
             settings.SUPPORT_CHAT_ID,
             photo=photo_id,
             caption=(
-                f"✉ | Новый вопрос\nОт: {user_name}\nВопрос: `{question_text}`\n\n"
+                f"✉ | Новый вопрос\nОт: {user_name}\nВопрос: `{question}`\n\n"
                 f"📝 👇"
             ),
             parse_mode='Markdown',
@@ -73,7 +72,7 @@ async def send_client_question_massage(
         await bot.send_message(
             settings.SUPPORT_CHAT_ID,
             text=(
-                f"✉ | Новый вопрос\nОт: {user_name}\nВопрос: `{question_text}`\n\n"
+                f"✉ | Новый вопрос\nОт: {user_name}\nВопрос: `{question}`\n\n"
                 f"📝 👇"
             ),
             parse_mode='Markdown',
@@ -88,7 +87,9 @@ async def send_client_question_massage(
 
 
 @router.message(StepsAnswerMessage.GET_MASSAGE)
-async def get_admin_answer(message: Message, state: FSMContext, bot: Bot) -> None:
+async def get_admin_answer(
+        message: Message, state: FSMContext, bot: Bot
+) -> None:
     data = await state.get_data()
     user_id = data.get('user_id')
     user_name = data.get('user_name')
@@ -96,9 +97,10 @@ async def get_admin_answer(message: Message, state: FSMContext, bot: Bot) -> Non
 
     # Отправляем ответ пользователю
     await bot.send_message(
+
         user_id,
         f"✉ Новое сообщение!\nОтвет от репетитора:\n\n`{answer}`",
-         parse_mode='Markdown'
+        parse_mode='Markdown'
     )
 
     # Уведомляем администратора об успешной отправке
@@ -107,4 +109,3 @@ async def get_admin_answer(message: Message, state: FSMContext, bot: Bot) -> Non
         parse_mode='Markdown'
     )
     await state.clear()  # Очищаем состояние после отправки ответа
-
