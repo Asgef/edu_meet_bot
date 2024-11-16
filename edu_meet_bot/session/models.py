@@ -10,8 +10,11 @@ class User(BaseModel):
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     tg_id: Mapped[int] = mapped_column(BigInteger, unique=True)
+
     username: Mapped[str] = mapped_column(unique=True, nullable=True)
     first_name: Mapped[str] = mapped_column(unique=True, nullable=True)
+    last_name: Mapped[str] = mapped_column(unique=True, nullable=True)
+
     is_admin: Mapped[bool] = mapped_column(default=False)
     timezone: Mapped[str] = mapped_column(String, default="Europe/Moscow")
     last_activity: Mapped[datetime] = mapped_column(
@@ -22,6 +25,13 @@ class User(BaseModel):
     )
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now(), onupdate=func.now()
+    )
+
+    tutor_slots = relationship(
+        "Slot", foreign_keys="Slot.tutor_id", back_populates="tutor"
+    )
+    student_slots = relationship(
+        "Slot", foreign_keys="Slot.student_id", back_populates="student"
     )
 
     def __repr__(self):
@@ -37,12 +47,21 @@ class Slot(BaseModel):
     )
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    day_of_week: Mapped[str] = mapped_column(
-        Enum(*CHOOSES, name='day_of_week_enum'), nullable=False)
-    hour: Mapped[time] = mapped_column(nullable=False)
-    duration: Mapped[int] = mapped_column(default=60)
+    date: Mapped[datetime] = mapped_column(nullable=False)
+    time_start: Mapped[time] = mapped_column(nullable=False)
+    time_end: Mapped[time] = mapped_column(nullable=False)
+    tutor_id: Mapped[int] = mapped_column(ForeignKey('user.id'), nullable=False)
+    student_id: Mapped[int] = mapped_column(ForeignKey('user.id'), nullable=True)
     is_available: Mapped[bool] = mapped_column(default=True)
-    is_recurring: Mapped[bool] = mapped_column(default=False)
+
+    comment: Mapped[str] = mapped_column(nullable=True)
+
+    tutor = relationship(
+        "User", foreign_keys=[tutor_id], back_populates="tutor_slots"
+    )
+    student = relationship(
+        "User", foreign_keys=[student_id], back_populates="student_slots"
+    )
 
     def __repr__(self):
         return (
