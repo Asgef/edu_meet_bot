@@ -3,6 +3,7 @@ from sqlalchemy import Enum, ForeignKey, BigInteger, String, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from edu_meet_bot.base_model import BaseModel
+from sqlalchemy import String
 
 
 class User(BaseModel):
@@ -11,12 +12,18 @@ class User(BaseModel):
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     tg_id: Mapped[int] = mapped_column(BigInteger, unique=True)
 
-    username: Mapped[str] = mapped_column(unique=True, nullable=True)
-    first_name: Mapped[str] = mapped_column(unique=True, nullable=True)
-    last_name: Mapped[str] = mapped_column(unique=True, nullable=True)
+    username: Mapped[str] = mapped_column(
+        String(150), unique=True, nullable=True
+    )
+    first_name: Mapped[str] = mapped_column(
+        String(150), unique=True, nullable=True
+    )
+    last_name: Mapped[str] = mapped_column(
+        String(150), unique=True, nullable=True
+    )
 
     is_admin: Mapped[bool] = mapped_column(default=False)
-    timezone: Mapped[str] = mapped_column(String, default="Europe/Moscow")
+    timezone: Mapped[str] = mapped_column(String(50), default="Europe/Moscow")
     last_activity: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=func.now()
     )
@@ -50,11 +57,15 @@ class Slot(BaseModel):
     date: Mapped[datetime] = mapped_column(nullable=False)
     time_start: Mapped[time] = mapped_column(nullable=False)
     time_end: Mapped[time] = mapped_column(nullable=False)
-    tutor_id: Mapped[int] = mapped_column(ForeignKey('user.id'), nullable=False)
-    student_id: Mapped[int] = mapped_column(ForeignKey('user.id'), nullable=True)
+    tutor_id: Mapped[int] = mapped_column(
+        ForeignKey('user.id'), nullable=False
+    )
+    student_id: Mapped[int] = mapped_column(
+        ForeignKey('user.id'), nullable=True
+    )
     is_available: Mapped[bool] = mapped_column(default=True)
 
-    comment: Mapped[str] = mapped_column(nullable=True)
+    comment: Mapped[str] = mapped_column(String(255),nullable=True)
 
     tutor = relationship(
         "User", foreign_keys=[tutor_id], back_populates="tutor_slots"
@@ -74,11 +85,17 @@ class AcademicSubject(BaseModel):
     __tablename__ = "academic_subject"
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    name: Mapped[str] = mapped_column(nullable=False)
-    description: Mapped[str] = mapped_column(nullable=False)
-    created_at: Mapped[datetime] = mapped_column(default=func.now())
+    name: Mapped[str] = mapped_column(
+        String(255), nullable=False
+    )
+    description: Mapped[str] = mapped_column(
+        String(1000), nullable=False
+    )
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now()
+    )
     updated_at: Mapped[datetime] = mapped_column(
-        default=func.now(), onupdate=func.now()
+        DateTime(timezone=True), default=func.now(), onupdate=func.now()
     )
 
     def __repr__(self):
@@ -98,11 +115,13 @@ class Order(BaseModel):
     status: Mapped[str] = mapped_column(
         Enum(*CHOICES, name='status_enum'), nullable=False
     )
-    comment: Mapped[str] = mapped_column(nullable=True)
+    comment: Mapped[str] = mapped_column(String(255), nullable=True)
     date: Mapped[datetime] = mapped_column(nullable=False)
-    created_at: Mapped[datetime] = mapped_column(default=func.now())
+    created_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), default=func.now()
+    )
     updated_at: Mapped[datetime] = mapped_column(
-        default=func.now(), onupdate=func.now()
+        DateTime(timezone=True), default=func.now(), onupdate=func.now()
     )
 
     # Relationships
