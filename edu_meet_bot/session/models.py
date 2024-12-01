@@ -48,7 +48,7 @@ class User(BaseModel):
 class Slot(BaseModel):
     __tablename__ = "slot"
 
-    CHOICES = ('available', 'pending', 'accepted',)
+    SLOT_CHOICES = ('available', 'pending', 'accepted',)
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     date: Mapped[datetime] = mapped_column(nullable=False)
@@ -61,7 +61,7 @@ class Slot(BaseModel):
         ForeignKey('user.id'), nullable=True
     )
     status: Mapped[str] = mapped_column(
-        Enum(*CHOICES, name='status_enum'), nullable=False,
+        Enum(*SLOT_CHOICES, name='slot_status_enum'), nullable=False,
         default='available'
     )
 
@@ -105,7 +105,7 @@ class AcademicSubject(BaseModel):
 class Order(BaseModel):
     __tablename__ = 'order'
 
-    CHOICES = ('pending', 'accepted', 'declined', 'canceled')
+    ORDER_CHOICES = ('pending', 'accepted', 'declined', 'canceled')
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     student_id: Mapped[int] = mapped_column(ForeignKey('user.id'))
@@ -113,7 +113,7 @@ class Order(BaseModel):
     slot_id: Mapped[int] = mapped_column(ForeignKey('slot.id'))
     subject_id: Mapped[int] = mapped_column(ForeignKey('academic_subject.id'))
     status: Mapped[str] = mapped_column(
-        Enum(*CHOICES, name='status_enum'), nullable=False
+        Enum(*ORDER_CHOICES, name='order_status_enum'), nullable=False
     )
     comment: Mapped[str] = mapped_column(String(255), nullable=True)
     date: Mapped[datetime] = mapped_column(nullable=False)
