@@ -48,10 +48,7 @@ class User(BaseModel):
 class Slot(BaseModel):
     __tablename__ = "slot"
 
-    CHOOSES = (
-        'monday', 'tuesday', 'wednesday', 'thursday',
-        'friday', 'saturday', 'sunday'
-    )
+    CHOICES = ('available', 'pending', 'accepted',)
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     date: Mapped[datetime] = mapped_column(nullable=False)
@@ -63,7 +60,10 @@ class Slot(BaseModel):
     student_id: Mapped[int] = mapped_column(
         ForeignKey('user.id'), nullable=True
     )
-    is_available: Mapped[bool] = mapped_column(default=True)
+    status: Mapped[str] = mapped_column(
+        Enum(*CHOICES, name='status_enum'), nullable=False,
+        default='available'
+    )
 
     comment: Mapped[str] = mapped_column(String(255),nullable=True)
 
@@ -76,8 +76,8 @@ class Slot(BaseModel):
 
     def __repr__(self):
         return (
-            f"<Slot(id={self.id}, day_of_week={self.day_of_week}, "
-            f"hour={self.hour})>"
+            f"<Slot(id={self.id}, date={self.date}, "
+            f"time_start={self.time_start}, status={self.status})>"
         )
 
 
