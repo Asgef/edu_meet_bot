@@ -3,7 +3,6 @@ from sqlalchemy import Enum, ForeignKey, BigInteger, String, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from edu_meet_bot.base_model import BaseModel
-from sqlalchemy import String
 
 
 class User(BaseModel):
@@ -65,7 +64,7 @@ class Slot(BaseModel):
         default='available'
     )
 
-    comment: Mapped[str] = mapped_column(String(255),nullable=True)
+    comment: Mapped[str] = mapped_column(String(255), nullable=True)
 
     tutor = relationship(
         "User", foreign_keys=[tutor_id], back_populates="tutor_slots"

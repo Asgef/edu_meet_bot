@@ -39,7 +39,8 @@ target_metadata = BaseModel.metadata
 
 def include_object(object, name, type_, reflected, compare_to):
     # Исключаем таблицы Django
-    if name.startswith("django_") or name.startswith("auth_") or name.startswith("schedule_"):
+    if (name.startswith("django_")
+            or name.startswith("auth_") or name.startswith("schedule_")):
         return False
     return True
 
