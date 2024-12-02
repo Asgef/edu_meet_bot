@@ -14,6 +14,9 @@ from edu_meet_bot.db import async_session
 from edu_meet_bot.session.enum_fields import SlotStatus
 import logging
 import traceback
+from edu_meet_bot.registration.utils import (
+    get_available_slots, group_slots_by_weeks, create_week_selection_keyboard
+)
 # from edu_meet_bot.debug.utils import log_json_data
 
 
@@ -38,64 +41,33 @@ async def receive_registration_request(message: Message) -> None:
 @router.callback_query(F.data.startswith('select_date|'))
 async def on_select_date_click(callback: CallbackQuery, state: FSMContext) -> None:
     logging.info(f'callback.data: {callback.data}')
-    user_id = callback.from_user.id
-
     today = datetime.now().date()
     month_later = today + timedelta(weeks=4)
 
     try:
         async with async_session() as db_session:
-            conditions = [
-                Slot.date >= today,
-                Slot.date <= month_later,
-                Slot.status == SlotStatus.AVAILABLE.value
-            ]
-
-            for condition in conditions:
-                logging.info(f'Condition: {condition}')
-
-            query = select(Slot).where(*conditions)
-            logging.info(f'Executing query: {query}')
-            result = await db_session.execute(query)
-            slots = result.scalars().all()
+            # Получаем доступные слоты
+            slots = await get_available_slots(db_session, today, month_later)
         logging.info(f'slots: {slots}')
+
         if not slots:
             await callback.message.answer(
                 "На ближайший месяц нет доступных недель для записи."
             )
             return
 
-        # Шаг 3: Группируем слоты по неделям
-        weeks = {}
-        for slot in slots:
-            week_start = slot.date.date() - timedelta(days=slot.date.weekday())
-            weeks.setdefault(week_start, []).append(slot)
+        # Группируем слоты по неделям
+        weeks = group_slots_by_weeks(slots)
 
-        # Шаг 4: Создаем кнопки для выбора недели
-        keyboard = InlineKeyboardMarkup(inline_keyboard=[])  # Создаем объект с пустым списком кнопок
-        for week_start in sorted(weeks.keys()):
-            week_label = f"{week_start.strftime('%d.%m.%Y')} - {(week_start + timedelta(days=6)).strftime('%d.%m.%Y')}"
-            keyboard.inline_keyboard.append([
-                InlineKeyboardButton(
-                    text=week_label,
-                    callback_data=f"select_week|{week_start.isoformat()}"
-                )
-            ])
+        # Создаем клавиатуру для выбора недели
+        keyboard = create_week_selection_keyboard(weeks)
 
-        # Шаг 5: Отправляем сообщение пользователю
-        try:
-            logging.info("Отправляем сообщение с выбором недели...")
-            await callback.message.answer(
-                "Выберите неделю для записи:",
-                reply_markup=keyboard
-            )
-            logging.info("Сообщение с выбором недели отправлено.")
-        except Exception as e:
-            logging.error(f"Ошибка при отправке сообщения: {e}")
-            logging.error(traceback.format_exc())
-            await callback.message.answer(
-                "Произошла ошибка при отправке сообщения. Пожалуйста, попробуйте позже."
-            )
+        # Отправляем сообщение с выбором недели
+        await callback.message.answer(
+            "Выберите неделю для записи:",
+            reply_markup=keyboard
+        )
+        logging.info("Сообщение с выбором недели отправлено.")
 
     except Exception as e:
         logging.error(f"Ошибка при обработке слотов: {e}")
@@ -103,3 +75,4 @@ async def on_select_date_click(callback: CallbackQuery, state: FSMContext) -> No
         await callback.message.answer(
             "Произошла ошибка при обработке вашего запроса. Пожалуйста, попробуйте позже."
         )
+
