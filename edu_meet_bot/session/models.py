@@ -1,8 +1,10 @@
 from datetime import datetime, time
-from sqlalchemy import Enum, ForeignKey, BigInteger, String, DateTime
+from sqlalchemy import ForeignKey, BigInteger, String, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from edu_meet_bot.base_model import BaseModel
+from edu_meet_bot.session.enum_fields import SlotStatus, OrderStatus
+from sqlalchemy import Enum as SQLAlchemyEnum
 
 
 class User(BaseModel):
@@ -12,13 +14,13 @@ class User(BaseModel):
     tg_id: Mapped[int] = mapped_column(BigInteger, unique=True)
 
     username: Mapped[str] = mapped_column(
-        String(150), unique=True, nullable=True
+        String(150), nullable=True
     )
     first_name: Mapped[str] = mapped_column(
-        String(150), unique=True, nullable=True
+        String(150), nullable=True
     )
     last_name: Mapped[str] = mapped_column(
-        String(150), unique=True, nullable=True
+        String(150), nullable=True
     )
 
     is_admin: Mapped[bool] = mapped_column(default=False)
@@ -59,9 +61,15 @@ class Slot(BaseModel):
     student_id: Mapped[int] = mapped_column(
         ForeignKey('user.id'), nullable=True
     )
-    status: Mapped[str] = mapped_column(
-        Enum(*SLOT_CHOICES, name='slot_status_enum'), nullable=False,
-        default='available'
+    status: Mapped[SlotStatus] = mapped_column(
+        SQLAlchemyEnum(
+            SlotStatus,
+            name='slot_status_enum',
+            values_callable=lambda x: [e.value for e in x],
+            native_enum=False
+        ),
+        nullable=False,
+        default=SlotStatus.AVAILABLE.value
     )
 
     comment: Mapped[str] = mapped_column(String(255), nullable=True)
@@ -111,8 +119,15 @@ class Order(BaseModel):
     tutor_id: Mapped[int] = mapped_column(ForeignKey('user.id'))
     slot_id: Mapped[int] = mapped_column(ForeignKey('slot.id'))
     subject_id: Mapped[int] = mapped_column(ForeignKey('academic_subject.id'))
-    status: Mapped[str] = mapped_column(
-        Enum(*ORDER_CHOICES, name='order_status_enum'), nullable=False
+    status: Mapped[OrderStatus] = mapped_column(
+        SQLAlchemyEnum(
+            OrderStatus,
+            name='order_status_enum',
+            values_callable=lambda x: [e.value for e in x],
+            native_enum=False
+        ),
+        nullable=False,
+        default=OrderStatus.PENDING.value
     )
     comment: Mapped[str] = mapped_column(String(255), nullable=True)
     date: Mapped[datetime] = mapped_column(nullable=False)
@@ -131,5 +146,5 @@ class Order(BaseModel):
     def __repr__(self):
         return (
             f"<Order(id={self.id}, student_id={self.student_id}, "
-            f"slot_id={self.slot_id})>"
+            f"slot_id={self.slot_id}, status={self.status})>"
         )

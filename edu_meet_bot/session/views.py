@@ -9,11 +9,12 @@ def main_menu_view(is_admin: bool = False):
     # kb.add(KeyboardButton(text="Мои занятия"))
     kb.button(text="О Нике")
     kb.add(KeyboardButton(text="Связаться с репетитором"))
+    kb.button(text="Записаться на занятие")
 
     if is_admin:
         kb.button(text="Админ панель")
 
-    kb.adjust(1, 3)
+    kb.adjust(1, 2, 1)
     return kb.as_markup(resize_keyboard=True)
 
 

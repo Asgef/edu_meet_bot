@@ -6,8 +6,11 @@ from aiogram.fsm.context import FSMContext
 from edu_meet_bot import settings
 from edu_meet_bot.support.utils import escape_markdown
 from edu_meet_bot.support.views import answer_button
+import logging
 # from edu_meet_bot.debug.utils import log_json_data
 
+
+logger = logging.getLogger(__name__)
 
 router = Router(name="edu_meet_bot/support")
 
@@ -33,6 +36,7 @@ async def get_client_question(message: Message, state: FSMContext) -> None:
 
 @router.callback_query(F.data.startswith('answer|'))
 async def on_answer_click(callback: CallbackQuery, state: FSMContext) -> None:
+    # logging.info(f'++++++++++++++++++++ {callback.data}')
     callback_data = callback.data.split('|')
     user_id, user_name = int(callback_data[1]), callback_data[2]
     await state.update_data(user_id=user_id, user_name=user_name)
