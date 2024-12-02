@@ -53,10 +53,20 @@ def create_period_selection_keyboard(
         ])
     return keyboard
 
+def create_time_selection_keyboard(slots: List[Slot], label_func: Callable[[Slot], str], callback_prefix: str) -> InlineKeyboardMarkup:
+    keyboard = InlineKeyboardMarkup(inline_keyboard=[])
+    for slot in slots:
+        keyboard.inline_keyboard.append([
+            InlineKeyboardButton(
+                text=label_func(slot),
+                callback_data=f"{callback_prefix}|{slot.id}"
+            )
+        ])
+    return keyboard
 
-async def handle_no_slots(message, period_desc: str) -> bool:
+
+async def handle_no_slots(message, period_desc: str):
     await message.answer(f"Нет доступных слотов на выбранный {period_desc}.")
-    return False
 
 
 from functools import wraps

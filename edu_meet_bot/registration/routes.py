@@ -7,7 +7,8 @@ import logging
 import traceback
 from edu_meet_bot.registration.utils import (
     get_available_slots, group_slots_by_time_period,
-    create_period_selection_keyboard, handle_no_slots, handle_exceptions
+    create_period_selection_keyboard, handle_no_slots,
+    handle_exceptions, create_time_selection_keyboard
 )
 # from edu_meet_bot.debug.utils import log_json_data
 
@@ -100,3 +101,40 @@ async def on_select_week_click(callback: CallbackQuery) -> None:
     logging.info("Сообщение с выбором дня отправлено.")
 
 
+@router.callback_query(F.data.startswith('select_day|'))
+async def on_select_day_click(callback: CallbackQuery) -> None:
+    logging.info(f'callback ++++++++++++++++ : {callback}')
+    try:
+        # Извлекаем дату дня из callback_data
+        _, day_str = callback.data.split('|')
+        selected_day = datetime.fromisoformat(day_str).date()
+
+        async with async_session() as db_session:
+            # Получаем доступные слоты для выбранного дня
+            slots = await get_available_slots(db_session, selected_day, selected_day)
+        logging.info(f'Слоты для дня {selected_day}: {slots}')
+
+        # Проверяем, есть ли доступные слоты
+        if not slots:
+            return await handle_no_slots(callback.message, period_desc="день")
+
+        # Создаем клавиатуру для выбора времени
+        keyboard = create_time_selection_keyboard(
+            slots,
+            label_func=lambda slot: f"{slot.time_start.strftime('%H:%M')} - {slot.time_end.strftime('%H:%M')}",
+            callback_prefix="select_time"
+        )
+
+        # Отправляем сообщение с выбором времени
+        await callback.message.edit_text(
+            f"Выберите время на {selected_day.strftime('%A, %d.%m.%Y')}:",
+            reply_markup=keyboard
+        )
+        logging.info("Сообщение с выбором времени отправлено.")
+
+    except Exception as e:
+        logging.error(f"Ошибка при обработке дня: {e}")
+        logging.error(traceback.format_exc())
+        await callback.message.answer(
+            "Произошла ошибка при обработке вашего запроса. Пожалуйста, попробуйте позже."
+        )
