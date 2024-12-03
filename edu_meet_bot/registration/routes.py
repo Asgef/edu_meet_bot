@@ -7,8 +7,9 @@ import logging
 import traceback
 from edu_meet_bot.registration.utils import (
     get_available_slots, group_slots_by_time_period,
-    create_period_selection_keyboard, handle_no_slots,
-    handle_exceptions, create_time_selection_keyboard
+    create_week_selection_keyboard, handle_no_slots,
+    handle_exceptions, create_time_selection_keyboard,
+    create_day_selection_keyboard
 )
 # from edu_meet_bot.debug.utils import log_json_data
 
@@ -30,31 +31,30 @@ async def receive_registration_request(message: Message) -> None:
     )
 
 
-# routes.py
 @router.callback_query(F.data.startswith('select_date|'))
 @handle_exceptions
 async def on_select_date_click(callback: CallbackQuery) -> None:
-    logging.info(f'callback.data: {callback.data}')
     today = datetime.now().date()
-    month_later = today + timedelta(weeks=4)
-
+    logging.info(f"Сегодняшняя дата ++++++++++++++++++= : {today}")
     async with async_session() as db_session:
         # Получаем доступные слоты
-        slots = await get_available_slots(db_session, today, month_later)
-    logging.info(f'slots: {slots}')
+        slots = await get_available_slots(db_session, today)
 
     if not slots:
         await handle_no_slots(callback.message, "месяц")
         return
 
+    logging.info(f"Слоты после выборки +++++++++++++++ : {[slot.date for slot in slots]}")
+
     # Группируем слоты по неделям
-    weeks = group_slots_by_time_period(slots, period='week')
+    weeks = group_slots_by_time_period(slots, period='week', today=today)
+
 
     # Создаем клавиатуру для выбора недели
-    keyboard = create_period_selection_keyboard(
+    keyboard = create_week_selection_keyboard(
         weeks,
-        label_func=lambda week_start: f"{week_start.strftime('%d.%m.%Y')} - "
-                                      f"{(week_start + timedelta(days=6)).strftime('%d.%m.%Y')}",
+        label_func=lambda start, end: f"{start.strftime('%d.%m.%Y')} - {end.strftime('%d.%m.%Y')}",
+
         callback_prefix="select_week"
     )
 
@@ -63,7 +63,7 @@ async def on_select_date_click(callback: CallbackQuery) -> None:
         "Выберите неделю для записи:",
         reply_markup=keyboard
     )
-    logging.info("Сообщение с выбором недели отправлено.")
+
 
 
 @router.callback_query(F.data.startswith('select_week|'))
@@ -77,7 +77,7 @@ async def on_select_week_click(callback: CallbackQuery) -> None:
     async with async_session() as db_session:
         # Получаем слоты в пределах выбранной недели
         slots = await get_available_slots(db_session, week_start, week_end)
-    logging.info(f'Слоты для недели {week_start} - {week_end}: {slots}')
+    logging.info(f'Слоты для недели {week_start} - {week_end}: \n{slots}\n')
 
     if not slots:
         await handle_no_slots(callback.message, f"неделю с {week_start.strftime('%d.%m.%Y')} по {week_end.strftime('%d.%m.%Y')}")
@@ -87,8 +87,8 @@ async def on_select_week_click(callback: CallbackQuery) -> None:
     days = group_slots_by_time_period(slots, period='day')
 
     # Создаем клавиатуру для выбора дня
-    keyboard = create_period_selection_keyboard(
-        days,
+    keyboard = create_day_selection_keyboard(
+        period=days,
         label_func=lambda day: day.strftime('%A, %d.%m.%Y'),
         callback_prefix="select_day"
     )
