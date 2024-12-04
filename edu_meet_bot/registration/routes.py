@@ -4,15 +4,21 @@ from edu_meet_bot.registration.views import select_date
 from datetime import datetime
 from edu_meet_bot.db import async_session
 import logging
-import traceback
 from edu_meet_bot.registration.utils import (
     get_available_slots, group_slots_by_time_period, handle_no_slots,
-    handle_exceptions
+    handle_exceptions, get_academic_subjects, get_usr_id
 )
 from edu_meet_bot.registration.views import (
-    select_week, select_slot,
-    select_day
+    select_week, select_slot, select_day, register_button,
+    register_button_academic_subject
 )
+from aiogram.fsm.context import FSMContext
+
+from edu_meet_bot.session.enum_fields import OrderStatus, SlotStatus
+from edu_meet_bot.settings import TUTOR_TG_ID
+from edu_meet_bot.session.models import Order, Slot
+from aiogram.filters.state import StateFilter
+
 
 
 logger = logging.getLogger(__name__)
@@ -107,42 +113,152 @@ async def on_select_week_click(callback: CallbackQuery) -> None:
 
 
 @router.callback_query(F.data.startswith('select_day|'))
+@handle_exceptions
 async def on_select_day_click(callback: CallbackQuery) -> None:
-    try:
-        # Извлекаем дату дня из callback_data
-        _, day_str = callback.data.split('|')
-        selected_day = datetime.fromisoformat(day_str).date()
+    # Извлекаем дату дня из callback_data
+    _, day_str = callback.data.split('|')
+    selected_day = datetime.fromisoformat(day_str).date()
 
-        async with async_session() as db_session:
-            # Получаем доступные слоты для выбранного дня
-            slots = await get_available_slots(
-                db_session, selected_day, selected_day
-            )
-        logging.info(f'Слоты для дня {selected_day}: {slots}')
-
-        # Проверяем, есть ли доступные слоты
-        if not slots:
-            return await handle_no_slots(callback.message, period_desc="день")
-
-        # Создаем клавиатуру для выбора времени
-        keyboard = select_slot(
-            slots,
-            label_func=lambda slot: f"{slot.time_start.strftime('%H:%M')} - "
-                                    f"{slot.time_end.strftime('%H:%M')}",
-            callback_prefix="select_time"
+    async with async_session() as db_session:
+        # Получаем доступные слоты для выбранного дня
+        slots = await get_available_slots(
+            db_session, selected_day, selected_day
         )
+    logging.info(f'Слоты для дня {selected_day}: {slots}')
 
-        # Отправляем сообщение с выбором времени
-        await callback.message.edit_text(
-            f"Выберите время на {selected_day.strftime('%A, %d.%m.%Y')}:",
-            reply_markup=keyboard
-        )
-        logging.info("Сообщение с выбором времени отправлено.")
+    # Проверяем, есть ли доступные слоты
+    if not slots:
+        return await handle_no_slots(callback.message, period_desc="день")
 
-    except Exception as e:
-        logging.error(f"Ошибка при обработке дня: {e}")
-        logging.error(traceback.format_exc())
-        await callback.message.answer(
-            "Произошла ошибка при обработке вашего запроса. "
-            "Пожалуйста, попробуйте позже."
+    # Создаем клавиатуру для выбора времени
+    keyboard = select_slot(
+        slots,
+        label_func=lambda slot: f"{slot.time_start.strftime('%H:%M')} - "
+                                f"{slot.time_end.strftime('%H:%M')}",
+        callback_prefix="select_slot"
+    )
+
+    # Отправляем сообщение с выбором времени
+    await callback.message.edit_text(
+        f"Выбери время на {selected_day.strftime('%A, %d.%m.%Y')}:",
+        reply_markup=keyboard
+    )
+    logging.info("Сообщение с выбором времени отправлено.")
+
+
+@router.callback_query(F.data.startswith('select_slot|'))
+@handle_exceptions
+async def on_select_slot_click(callback: CallbackQuery) -> None:
+    logging.info(f'callback.data: >>>>>> {callback}')
+
+    # Извлекаем данные из callback_data
+    _, slot_id, slot_time = callback.data.split('|')
+    slot_id = int(slot_id)
+
+
+    # Отправляем сообщение с информацией о выбранном слоте
+    await callback.message.edit_text(
+        f'Регистрация на занятие в {slot_time}.\n',
+        reply_markup=register_button(slot_id)
+    )
+
+
+@router.callback_query(F.data.startswith('register_academic_subject|'))
+@handle_exceptions
+async def on_register_subject_click(callback: CallbackQuery, state: FSMContext) -> None:
+    # Извлекаем slot_id из callback_data
+    _, slot_id = callback.data.split('|')
+    slot_id = int(slot_id)
+
+    # Сохраняем slot_id в FSM
+    await state.update_data(slot_id=slot_id)
+
+    # Получаем список предметов
+    async with async_session() as db_session:
+        subjects = await get_academic_subjects(db_session)
+
+    # Создаем клавиатуру для выбора предмета
+    keyboard = register_button_academic_subject(subjects)
+
+    # Отправляем сообщение пользователю
+    await callback.message.edit_text(
+        "Выберите учебный предмет:",
+        reply_markup=keyboard
+    )
+
+
+@router.callback_query(F.data.startswith('select_subject|'))
+@handle_exceptions
+async def on_subject_selected(callback: CallbackQuery, state: FSMContext) -> None:
+    # Извлекаем subject_id из callback_data
+    _, subject_id = callback.data.split('|')
+    subject_id = int(subject_id)
+
+    # Сохраняем subject_id в FSM
+    await state.update_data(subject_id=subject_id)
+
+    # Сообщение пользователю о вводе комментария
+    await callback.message.edit_text(
+        "Введите комментарий.\n\n"
+        "Представься, задай вопрос или просто кажи 'Привет' "
+    )
+
+    # Устанавливаем состояние ожидания комментария
+    await state.set_state("waiting_for_comment")
+
+
+@router.message(StateFilter("waiting_for_comment"))
+@handle_exceptions
+async def on_comment_entered(message: Message, state: FSMContext) -> None:
+    # Получаем введённый комментарий
+    comment = message.text
+
+    # Извлекаем данные из FSM
+    data = await state.get_data()
+    slot_id = data["slot_id"]
+    subject_id = data["subject_id"]
+
+    # Получаем id студента и репетитора
+    async with async_session() as db_session:
+        student_id = await get_usr_id(db_session, message.from_user.id)
+        tutor_id = await get_usr_id(db_session, TUTOR_TG_ID)
+        slot = await db_session.get(Slot, slot_id)
+
+        # Проверяем статус слота, слот может уже быть занят
+        if slot.status != SlotStatus.AVAILABLE:
+            await message.answer("Слот уже занят. Пожалуйста, выберите другой.")
+            await state.clear()
+            return
+
+        # Обновляем статус слота
+        slot.status = SlotStatus.PENDING
+        slot.student_id = student_id
+
+        # Создаем экземпляр Order
+        order = Order(
+            student_id=student_id,
+            tutor_id=tutor_id,
+            slot_id=slot_id,
+            subject_id=subject_id,
+            status=OrderStatus.PENDING,
+            comment=comment,
+            date=slot.date,
         )
+        db_session.add(order)
+
+        # Сохраняем изменения
+        await db_session.commit()
+
+    # Отправляем сообщение пользователю
+    formatted_date = slot.date.strftime("%d.%m.%Y")
+
+    await message.answer(
+        f"Вы успешно зарегистрировались на занятие!\n"
+        f"Дата: {formatted_date} {slot.time_start}-{slot.time_end}, "
+        f"Предмет: {subject_id}, Комментарий: {comment}"
+    )
+
+    # Очистка состояния
+    await state.clear()
+
+

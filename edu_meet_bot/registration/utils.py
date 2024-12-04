@@ -1,4 +1,4 @@
-from edu_meet_bot.session.models import Slot, SlotStatus
+from edu_meet_bot.session.models import Slot, SlotStatus, AcademicSubject, User
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import date, timedelta
 from sqlalchemy import select
@@ -23,6 +23,22 @@ async def get_available_slots(
     )
     result = await db_session.execute(query)
     return result.scalars().all()
+
+
+async def get_academic_subjects(
+        db_session: AsyncSession
+) -> List[AcademicSubject]:
+
+    query = select(AcademicSubject)
+    result = await db_session.execute(query)
+    return result.scalars().all()
+
+
+async def get_usr_id(db_session: AsyncSession, tg_id: int) -> int:
+    query = select(User.id).where(User.tg_id == tg_id)
+    result = await db_session.execute(query)
+    return result.scalar()
+
 
 
 def group_slots_by_time_period(

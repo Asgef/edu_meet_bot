@@ -17,6 +17,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media_files')
 
 TUTOR_PHOTO = os.getenv('TUTOR_PHOTO')
+TUTOR_TG_ID = int(os.getenv('TUTOR_TG_ID'))
 ABOUT_MASSAGE = os.getenv('ABOUT_MASSAGE')
 
 
