@@ -10,8 +10,8 @@ from edu_meet_bot.registration.utils import (
     handle_exceptions
 )
 from edu_meet_bot.registration.views import (
-    create_week_selection_keyboard, create_time_selection_keyboard,
-    create_day_selection_keyboard
+    select_week, select_slot,
+    select_day
 )
 
 
@@ -49,7 +49,7 @@ async def on_select_date_click(callback: CallbackQuery) -> None:
     weeks = group_slots_by_time_period(slots, period='week', today=today)
 
     # Создаем клавиатуру для выбора недели
-    keyboard = create_week_selection_keyboard(
+    keyboard = select_week(
         weeks,
         label_func=lambda start, end:
         f"{start.strftime('%d.%m.%Y')} - {end.strftime('%d.%m.%Y')}",
@@ -91,7 +91,7 @@ async def on_select_week_click(callback: CallbackQuery) -> None:
     days = group_slots_by_time_period(slots, period='day')
 
     # Создаем клавиатуру для выбора дня
-    keyboard = create_day_selection_keyboard(
+    keyboard = select_day(
         period=days,
         label_func=lambda day: day.strftime('%A, %d.%m.%Y'),
         callback_prefix="select_day"
@@ -125,7 +125,7 @@ async def on_select_day_click(callback: CallbackQuery) -> None:
             return await handle_no_slots(callback.message, period_desc="день")
 
         # Создаем клавиатуру для выбора времени
-        keyboard = create_time_selection_keyboard(
+        keyboard = select_slot(
             slots,
             label_func=lambda slot: f"{slot.time_start.strftime('%H:%M')} - "
                                     f"{slot.time_end.strftime('%H:%M')}",

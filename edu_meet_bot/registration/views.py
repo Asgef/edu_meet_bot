@@ -13,7 +13,7 @@ def select_date(user_id: int, user_name):
     return kb.as_markup()
 
 
-def create_week_selection_keyboard(
+def select_week(
         period: Dict[date, List[Slot]],
         label_func: Callable[[date, date], str],
         callback_prefix: str
@@ -41,7 +41,7 @@ def create_week_selection_keyboard(
     return keyboard
 
 
-def create_day_selection_keyboard(
+def select_day(
     period: Dict[date, List[Slot]],
     label_func: Callable[[date], str],
     callback_prefix: str
@@ -59,7 +59,7 @@ def create_day_selection_keyboard(
     return keyboard
 
 
-def create_time_selection_keyboard(
+def select_slot(
         slots: List[Slot],
         label_func: Callable[[Slot], str],
         callback_prefix: str
