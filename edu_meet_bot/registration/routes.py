@@ -1,17 +1,18 @@
 from aiogram import Router, F
 from aiogram.types import Message, CallbackQuery
 from edu_meet_bot.registration.views import select_date
-from datetime import datetime, timedelta
+from datetime import datetime
 from edu_meet_bot.db import async_session
 import logging
 import traceback
 from edu_meet_bot.registration.utils import (
-    get_available_slots, group_slots_by_time_period,
-    create_week_selection_keyboard, handle_no_slots,
-    handle_exceptions, create_time_selection_keyboard,
+    get_available_slots, group_slots_by_time_period, handle_no_slots,
+    handle_exceptions
+)
+from edu_meet_bot.registration.views import (
+    create_week_selection_keyboard, create_time_selection_keyboard,
     create_day_selection_keyboard
 )
-# from edu_meet_bot.debug.utils import log_json_data
 
 
 logger = logging.getLogger(__name__)
@@ -35,8 +36,8 @@ async def receive_registration_request(message: Message) -> None:
 @handle_exceptions
 async def on_select_date_click(callback: CallbackQuery) -> None:
     today = datetime.now().date()
-    logging.info(f"Сегодняшняя дата ++++++++++++++++++= : {today}")
     async with async_session() as db_session:
+
         # Получаем доступные слоты
         slots = await get_available_slots(db_session, today)
 
@@ -44,16 +45,14 @@ async def on_select_date_click(callback: CallbackQuery) -> None:
         await handle_no_slots(callback.message, "месяц")
         return
 
-    logging.info(f"Слоты после выборки +++++++++++++++ : {[slot.date for slot in slots]}")
-
     # Группируем слоты по неделям
     weeks = group_slots_by_time_period(slots, period='week', today=today)
-
 
     # Создаем клавиатуру для выбора недели
     keyboard = create_week_selection_keyboard(
         weeks,
-        label_func=lambda start, end: f"{start.strftime('%d.%m.%Y')} - {end.strftime('%d.%m.%Y')}",
+        label_func=lambda start, end:
+        f"{start.strftime('%d.%m.%Y')} - {end.strftime('%d.%m.%Y')}",
 
         callback_prefix="select_week"
     )
@@ -65,22 +64,27 @@ async def on_select_date_click(callback: CallbackQuery) -> None:
     )
 
 
-
 @router.callback_query(F.data.startswith('select_week|'))
 @handle_exceptions
 async def on_select_week_click(callback: CallbackQuery) -> None:
-    logging.info(f'callback.data: {callback.data}')
-    _, week_start_str = callback.data.split('|')
+    logging.info(f'callback.data: >>>>>> {callback.data}')
+    _, week_start_str, week_end_str = callback.data.split('|')
     week_start = datetime.fromisoformat(week_start_str).date()
-    week_end = week_start + timedelta(days=6)
+    week_end = datetime.fromisoformat(week_end_str).date()
 
     async with async_session() as db_session:
         # Получаем слоты в пределах выбранной недели
         slots = await get_available_slots(db_session, week_start, week_end)
-    logging.info(f'Слоты для недели {week_start} - {week_end}: \n{slots}\n')
+    logging.info(
+        f'Слоты для недели >>>>>>> {week_start} - {week_end}: \n{slots}\n'
+    )
 
     if not slots:
-        await handle_no_slots(callback.message, f"неделю с {week_start.strftime('%d.%m.%Y')} по {week_end.strftime('%d.%m.%Y')}")
+        await handle_no_slots(
+            callback.message,
+            f"неделю с {week_start.strftime('%d.%m.%Y')} по "
+            f"{week_end.strftime('%d.%m.%Y')}"
+        )
         return
 
     # Группируем слоты по дням
@@ -95,7 +99,8 @@ async def on_select_week_click(callback: CallbackQuery) -> None:
 
     # Отправляем сообщение с выбором дня
     await callback.message.edit_text(
-        f"Выберите день недели с {week_start.strftime('%d.%m.%Y')} по {week_end.strftime('%d.%m.%Y')}:",
+        f"Выберите день недели с {week_start.strftime('%d.%m.%Y')} по "
+        f"{week_end.strftime('%d.%m.%Y')}:",
         reply_markup=keyboard
     )
     logging.info("Сообщение с выбором дня отправлено.")
@@ -103,7 +108,6 @@ async def on_select_week_click(callback: CallbackQuery) -> None:
 
 @router.callback_query(F.data.startswith('select_day|'))
 async def on_select_day_click(callback: CallbackQuery) -> None:
-    logging.info(f'callback ++++++++++++++++ : {callback}')
     try:
         # Извлекаем дату дня из callback_data
         _, day_str = callback.data.split('|')
@@ -111,7 +115,9 @@ async def on_select_day_click(callback: CallbackQuery) -> None:
 
         async with async_session() as db_session:
             # Получаем доступные слоты для выбранного дня
-            slots = await get_available_slots(db_session, selected_day, selected_day)
+            slots = await get_available_slots(
+                db_session, selected_day, selected_day
+            )
         logging.info(f'Слоты для дня {selected_day}: {slots}')
 
         # Проверяем, есть ли доступные слоты
@@ -121,7 +127,8 @@ async def on_select_day_click(callback: CallbackQuery) -> None:
         # Создаем клавиатуру для выбора времени
         keyboard = create_time_selection_keyboard(
             slots,
-            label_func=lambda slot: f"{slot.time_start.strftime('%H:%M')} - {slot.time_end.strftime('%H:%M')}",
+            label_func=lambda slot: f"{slot.time_start.strftime('%H:%M')} - "
+                                    f"{slot.time_end.strftime('%H:%M')}",
             callback_prefix="select_time"
         )
 
@@ -136,5 +143,6 @@ async def on_select_day_click(callback: CallbackQuery) -> None:
         logging.error(f"Ошибка при обработке дня: {e}")
         logging.error(traceback.format_exc())
         await callback.message.answer(
-            "Произошла ошибка при обработке вашего запроса. Пожалуйста, попробуйте позже."
+            "Произошла ошибка при обработке вашего запроса. "
+            "Пожалуйста, попробуйте позже."
         )
