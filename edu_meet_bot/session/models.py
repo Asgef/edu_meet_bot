@@ -1,7 +1,8 @@
-from datetime import datetime, time
+from datetime import datetime, time, date
 from sqlalchemy import ForeignKey, BigInteger, String, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
+from sqlalchemy.sql.sqltypes import Date, Time
 from edu_meet_bot.base_model import BaseModel
 from edu_meet_bot.session.enum_fields import SlotStatus, OrderStatus
 from sqlalchemy import Enum as SQLAlchemyEnum
@@ -52,9 +53,9 @@ class Slot(BaseModel):
     SLOT_CHOICES = ('available', 'pending', 'accepted',)
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
-    date: Mapped[datetime] = mapped_column(nullable=False)
-    time_start: Mapped[time] = mapped_column(nullable=False)
-    time_end: Mapped[time] = mapped_column(nullable=False)
+    date: Mapped[date] = mapped_column(Date, nullable=False)
+    time_start: Mapped[time] = mapped_column(Time, nullable=False)
+    time_end: Mapped[time] = mapped_column(Time, nullable=False)
     tutor_id: Mapped[int] = mapped_column(
         ForeignKey('user.id'), nullable=False
     )
