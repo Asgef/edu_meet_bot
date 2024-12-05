@@ -6,7 +6,7 @@ from edu_meet_bot.db import async_session
 import logging
 from edu_meet_bot.registration.utils import (
     get_available_slots, group_slots_by_time_period, handle_no_slots,
-    handle_exceptions, get_academic_subjects, get_usr_id
+    handle_exceptions, get_academic_subjects, get_usr_id, get_daily_slots
 )
 from edu_meet_bot.registration.views import (
     select_week, select_slot, select_day, register_button,
@@ -18,7 +18,6 @@ from edu_meet_bot.session.enum_fields import OrderStatus, SlotStatus
 from edu_meet_bot.settings import TUTOR_TG_ID
 from edu_meet_bot.session.models import Order, Slot
 from aiogram.filters.state import StateFilter
-
 
 
 logger = logging.getLogger(__name__)
@@ -41,15 +40,21 @@ async def receive_registration_request(message: Message) -> None:
 @router.callback_query(F.data.startswith('select_date|'))
 @handle_exceptions
 async def on_select_date_click(callback: CallbackQuery) -> None:
-    today = datetime.now().date()
-    async with async_session() as db_session:
+    today = datetime.now().date()  # Текущая дата
+    now_time = datetime.now().time()  # Текущее время
+    logging.info(f'Сегодня >>>>>>>>>>>>>: {today}, Текущее время: {now_time}')
 
+    async with async_session() as db_session:
         # Получаем доступные слоты
-        slots = await get_available_slots(db_session, today)
+        slots = await get_available_slots(
+            db_session, start_date=today, current_time=now_time
+        )
 
     if not slots:
         await handle_no_slots(callback.message, "месяц")
         return
+
+    logging.info(f'Слоты >>>>>>>>>>>>>>>>>: {slots}')
 
     # Группируем слоты по неделям
     weeks = group_slots_by_time_period(slots, period='week', today=today)
@@ -59,7 +64,6 @@ async def on_select_date_click(callback: CallbackQuery) -> None:
         weeks,
         label_func=lambda start, end:
         f"{start.strftime('%d.%m.%Y')} - {end.strftime('%d.%m.%Y')}",
-
         callback_prefix="select_week"
     )
 
@@ -73,7 +77,6 @@ async def on_select_date_click(callback: CallbackQuery) -> None:
 @router.callback_query(F.data.startswith('select_week|'))
 @handle_exceptions
 async def on_select_week_click(callback: CallbackQuery) -> None:
-    logging.info(f'callback.data: >>>>>> {callback.data}')
     _, week_start_str, week_end_str = callback.data.split('|')
     week_start = datetime.fromisoformat(week_start_str).date()
     week_end = datetime.fromisoformat(week_end_str).date()
@@ -81,9 +84,8 @@ async def on_select_week_click(callback: CallbackQuery) -> None:
     async with async_session() as db_session:
         # Получаем слоты в пределах выбранной недели
         slots = await get_available_slots(db_session, week_start, week_end)
-    logging.info(
-        f'Слоты для недели >>>>>>> {week_start} - {week_end}: \n{slots}\n'
-    )
+
+    logging.info(f'Недельные слоты >>>>>>>>>>>>>>>>>: {slots}')
 
     if not slots:
         await handle_no_slots(
@@ -121,10 +123,11 @@ async def on_select_day_click(callback: CallbackQuery) -> None:
 
     async with async_session() as db_session:
         # Получаем доступные слоты для выбранного дня
-        slots = await get_available_slots(
-            db_session, selected_day, selected_day
+        slots = await get_daily_slots(
+            db_session, selected_day, datetime.now().time()
         )
-    logging.info(f'Слоты для дня {selected_day}: {slots}')
+    slots.sort(key=lambda slot: slot.time_start)
+    logging.info(f'Слоты для дня >>>>>>>>>>>>>> {selected_day}: {slots}')
 
     # Проверяем, есть ли доступные слоты
     if not slots:
@@ -149,12 +152,9 @@ async def on_select_day_click(callback: CallbackQuery) -> None:
 @router.callback_query(F.data.startswith('select_slot|'))
 @handle_exceptions
 async def on_select_slot_click(callback: CallbackQuery) -> None:
-    logging.info(f'callback.data: >>>>>> {callback}')
-
     # Извлекаем данные из callback_data
     _, slot_id, slot_time = callback.data.split('|')
     slot_id = int(slot_id)
-
 
     # Отправляем сообщение с информацией о выбранном слоте
     await callback.message.edit_text(
@@ -165,7 +165,9 @@ async def on_select_slot_click(callback: CallbackQuery) -> None:
 
 @router.callback_query(F.data.startswith('register_academic_subject|'))
 @handle_exceptions
-async def on_register_subject_click(callback: CallbackQuery, state: FSMContext) -> None:
+async def on_register_subject_click(
+        callback: CallbackQuery, state: FSMContext
+) -> None:
     # Извлекаем slot_id из callback_data
     _, slot_id = callback.data.split('|')
     slot_id = int(slot_id)
@@ -189,7 +191,9 @@ async def on_register_subject_click(callback: CallbackQuery, state: FSMContext) 
 
 @router.callback_query(F.data.startswith('select_subject|'))
 @handle_exceptions
-async def on_subject_selected(callback: CallbackQuery, state: FSMContext) -> None:
+async def on_subject_selected(
+        callback: CallbackQuery, state: FSMContext
+) -> None:
     # Извлекаем subject_id из callback_data
     _, subject_id = callback.data.split('|')
     subject_id = int(subject_id)
@@ -226,7 +230,9 @@ async def on_comment_entered(message: Message, state: FSMContext) -> None:
 
         # Проверяем статус слота, слот может уже быть занят
         if slot.status != SlotStatus.AVAILABLE:
-            await message.answer("Слот уже занят. Пожалуйста, выберите другой.")
+            await message.answer(
+                "Слот уже занят. Пожалуйста, выберите другой."
+            )
             await state.clear()
             return
 
@@ -260,5 +266,3 @@ async def on_comment_entered(message: Message, state: FSMContext) -> None:
 
     # Очистка состояния
     await state.clear()
-
-

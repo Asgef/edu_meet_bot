@@ -1,5 +1,4 @@
 import logging
-
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from typing import Dict, List, Callable
@@ -72,7 +71,8 @@ def select_slot(
         keyboard.inline_keyboard.append([
             InlineKeyboardButton(
                 text=label_func(slot),
-                callback_data=f"{callback_prefix}|{slot.id}|{slot.time_start.strftime('%H:%M')}"
+                callback_data=f"{callback_prefix}|{slot.id}|"
+                              f"{slot.time_start.strftime('%H:%M')}"
             )
         ])
     return keyboard
@@ -90,7 +90,10 @@ def register_button(slot_id: int) -> InlineKeyboardMarkup:
         ]
     )
 
-def register_button_academic_subject(subjects: List[AcademicSubject]) -> InlineKeyboardMarkup:
+
+def register_button_academic_subject(
+        subjects: List[AcademicSubject]
+) -> InlineKeyboardMarkup:
 
     return InlineKeyboardMarkup(
         inline_keyboard=[
