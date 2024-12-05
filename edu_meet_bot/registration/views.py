@@ -9,7 +9,8 @@ from edu_meet_bot.session.models import Slot, AcademicSubject
 def select_date(user_id: int, user_name):
     kb = InlineKeyboardBuilder()
     kb.button(
-        text="Выбрать дату", callback_data=f"select_date|{user_id}|{user_name}"
+        text="📅 Выбрать дату",  # Добавляем иконку для ясности
+        callback_data=f"select_date|{user_id}|{user_name}"
     )
     return kb.as_markup()
 
@@ -72,7 +73,8 @@ def select_slot(
             InlineKeyboardButton(
                 text=label_func(slot),
                 callback_data=f"{callback_prefix}|{slot.id}|"
-                              f"{slot.time_start.strftime('%H:%M')}"
+                              f"{slot.time_start.strftime('%H:%M')}|"
+                              f"{slot.date.isoformat()}"
             )
         ])
     return keyboard
@@ -83,7 +85,7 @@ def register_button(slot_id: int) -> InlineKeyboardMarkup:
         inline_keyboard=[
             [
                 InlineKeyboardButton(
-                    text='Регистрация',
+                    text='✅ Регистрация',
                     callback_data=f'register_academic_subject|{slot_id}'
                 )
             ]
@@ -94,13 +96,12 @@ def register_button(slot_id: int) -> InlineKeyboardMarkup:
 def register_button_academic_subject(
         subjects: List[AcademicSubject]
 ) -> InlineKeyboardMarkup:
-
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(
-                text=sub.name, callback_data=f"select_subject|{sub.id}"
-            )
-            ]
+                text=f"📚 {sub.name}",
+                callback_data=f"select_subject|{sub.id}|{sub.name}"
+            )]
             for sub in subjects
         ]
     )
