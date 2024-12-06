@@ -8,6 +8,12 @@ install:
 start:
 	${MANAGE} start
 
+start_production:
+	nohup make start &
+
+stop:
+	pkill -f edu_meet_bot.scripts.run_bot
+
 lint:
 	${MANAGE} flake8 .
 
