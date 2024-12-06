@@ -1,4 +1,4 @@
-from aiogram import Router, F
+from aiogram import Router, F, Bot
 from aiogram.types import Message, CallbackQuery
 from edu_meet_bot.registration.views import select_date
 from datetime import datetime
@@ -13,9 +13,8 @@ from edu_meet_bot.registration.views import (
     register_button_academic_subject
 )
 from aiogram.fsm.context import FSMContext
-
 from edu_meet_bot.session.enum_fields import OrderStatus, SlotStatus
-from edu_meet_bot.settings import TUTOR_TG_ID, PRICE
+from edu_meet_bot.settings import TUTOR_TG_ID, PRICE, SUPPORT_CHAT_ID
 from edu_meet_bot.session.models import Order, Slot
 from aiogram.filters.state import StateFilter
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
@@ -312,12 +311,12 @@ async def on_comment_entered(message: Message, state: FSMContext) -> None:
 
 async def finish_registration(
         state: FSMContext,
-        message_object: Message,
+        message_object: Message | CallbackQuery,
         slot_id: int,
         subject_id: int,
         subject_name: str,
         user_id: int,
-        comment: str
+        comment: str,
 ) -> None:
     async with async_session() as db_session:
         # Получаем student_id по user_id
@@ -371,14 +370,43 @@ async def finish_registration(
         f"💬 <b>Комментарий:</b> {'Не указан' if not comment else comment}"
     )
 
+    # Получаем имя пользователя (универсально для Message и CallbackQuery)
+    user = message_object.from_user
+    username = user.username
+    user_first_name = user.first_name
+    user_name = username if username else user_first_name
+
     # Обновляем текст сообщения, если это сообщение бота
     if isinstance(message_object, CallbackQuery):
         await message_object.message.edit_text(
             registration_message, parse_mode="HTML"
+
         )
+        # Получаем бот из CallbackQuery,
+        # что бы отправить уведомление в чат поддержки
+        bot = message_object.bot
     else:
         # Отправляем новое сообщение, если это пользовательское сообщение
         await message_object.answer(registration_message, parse_mode="HTML")
+        bot = message_object.bot  # Получаем бот из Message
+
+    logging.info(
+        f"Отправка уведомления в SUPPORT_CHAT_ID: {SUPPORT_CHAT_ID}"
+    )
+    logging.info("")
+    await bot.send_message(
+        chat_id=SUPPORT_CHAT_ID,
+        text=(
+            f"🔥 <b>Новый заказ!</b> 🔥\n\n"
+            f"👤 <b>Пользователь:</b> {user_name}\n"
+            f"📅 <b>Дата:</b> {formatted_date} "
+            f"{slot.time_start.strftime('%H:%M')}-"
+            f"{slot.time_end.strftime('%H:%M')}\n"
+            f"📘 <b>Предмет:</b> {subject_name}\n"
+            f"💬 <b>Комментарий:</b> {'Не указан' if not comment else comment}"
+        ),
+        parse_mode='HTML'
+    )
 
     # Очистка состояния
     await state.clear()
