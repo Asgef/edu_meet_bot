@@ -1,23 +1,25 @@
-from aiogram import Router, F, Bot
-from aiogram.types import Message, CallbackQuery
-from edu_meet_bot.registration.views import select_date
+from aiogram import Router, F
 from datetime import datetime
 from edu_meet_bot.db import async_session
-import logging
+from aiogram.fsm.context import FSMContext
+from edu_meet_bot.session.enum_fields import OrderStatus, SlotStatus
+from edu_meet_bot.settings import TUTOR_TG_ID, PRICE, SUPPORT_CHAT_ID
+from edu_meet_bot.session.models import Order, Slot
+from aiogram.filters.state import StateFilter
+from edu_meet_bot.support.views import answer_button
+from aiogram.exceptions import TelegramBadRequest
 from edu_meet_bot.registration.utils import (
     get_available_slots, group_slots_by_time_period, handle_no_slots,
     handle_exceptions, get_academic_subjects, get_usr_id, get_daily_slots
 )
 from edu_meet_bot.registration.views import (
     select_week, select_slot, select_day, register_button,
-    register_button_academic_subject
+    register_button_academic_subject, select_date
 )
-from aiogram.fsm.context import FSMContext
-from edu_meet_bot.session.enum_fields import OrderStatus, SlotStatus
-from edu_meet_bot.settings import TUTOR_TG_ID, PRICE, SUPPORT_CHAT_ID
-from edu_meet_bot.session.models import Order, Slot
-from aiogram.filters.state import StateFilter
-from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import (
+    Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+)
+import logging
 
 
 logger = logging.getLogger(__name__)
@@ -65,8 +67,8 @@ async def on_select_date_click(callback: CallbackQuery) -> None:
     # Создаем клавиатуру для выбора недели
     keyboard = select_week(
         weeks,
-        label_func = lambda start, end: f"📅 {start.strftime('%d.%m')} - "
-                                        f"{end.strftime('%d.%m.%Y')}",
+        label_func=lambda start, end:
+        f"📅 {start.strftime('%d.%m')} - {end.strftime('%d.%m.%Y')}",
         callback_prefix="select_week"
     )
 
@@ -264,16 +266,12 @@ async def on_skip_comment(callback: CallbackQuery, state: FSMContext) -> None:
     # Завершаем регистрацию с пустым комментарием
     await finish_registration(
         state=state,
-        message_object=callback.message,
+        message_object=callback,
         slot_id=slot_id,
         subject_id=subject_id,
         subject_name=subject_name,
-        user_id=callback.from_user.id,
         comment=""
     )
-
-    # Убираем клавиатуру после завершения
-    await callback.message.edit_reply_markup(reply_markup=None)
 
 
 @router.message(StateFilter("waiting_for_comment"))
@@ -303,7 +301,6 @@ async def on_comment_entered(message: Message, state: FSMContext) -> None:
         message_object=message,
         slot_id=slot_id,
         subject_id=subject_id,
-        user_id=message.from_user.id,
         subject_name=subject_name,
         comment=comment
     )
@@ -315,14 +312,27 @@ async def finish_registration(
         slot_id: int,
         subject_id: int,
         subject_name: str,
-        user_id: int,
         comment: str,
 ) -> None:
     async with async_session() as db_session:
+        # Извлекаем информацию о пользователе
+        user = message_object.from_user
+        user_id = user.id
+        username = user.username
+        user_first_name = user.first_name
+        user_name = username if username else user_first_name
+
+        # Логирование для отладки
+        logging.info(
+            f"from_user: ID={user_id}, Username={username}, "
+            f"First Name={user_first_name}"
+        )
+
         # Получаем student_id по user_id
         student_id = await get_usr_id(db_session, user_id)
         logging.info(
-            f"Resolved student_id: {student_id} for user_id: {user_id}"
+            f"Resolved student_id: {student_id} "
+            f"for user_id >>>>>>>>>>>>: {user_id}"
         )
 
         if not student_id:
@@ -360,53 +370,53 @@ async def finish_registration(
         db_session.add(order)
         await db_session.commit()
 
-    # Отправляем сообщение пользователю
+    # Форматируем дату для сообщения
     formatted_date = slot.date.strftime("%d.%m.%Y")
     registration_message = (
         f"✅ <b>Вы успешно зарегистрировались на занятие!</b>\n\n"
-        f"📅 <b>Дата:</b> {formatted_date} {slot.time_start.strftime('%H:%M')}-"
+        f"📅 <b>Дата:</b> {formatted_date} "
+        f"{slot.time_start.strftime('%H:%M')}-"
         f"{slot.time_end.strftime('%H:%M')}\n"
         f"📘 <b>Предмет:</b> {subject_name}\n"
         f"💬 <b>Комментарий:</b> {'Не указан' if not comment else comment}"
     )
 
-    # Получаем имя пользователя (универсально для Message и CallbackQuery)
-    user = message_object.from_user
-    username = user.username
-    user_first_name = user.first_name
-    user_name = username if username else user_first_name
-
-    # Обновляем текст сообщения, если это сообщение бота
+    # Определяем тип message_object
+    # и отправляем соответствующее сообщение пользователю
     if isinstance(message_object, CallbackQuery):
         await message_object.message.edit_text(
             registration_message, parse_mode="HTML"
-
         )
-        # Получаем бот из CallbackQuery,
-        # что бы отправить уведомление в чат поддержки
         bot = message_object.bot
     else:
-        # Отправляем новое сообщение, если это пользовательское сообщение
         await message_object.answer(registration_message, parse_mode="HTML")
         bot = message_object.bot  # Получаем бот из Message
 
+    # Логирование отправки уведомления
     logging.info(
-        f"Отправка уведомления в SUPPORT_CHAT_ID: {SUPPORT_CHAT_ID}"
+        f"Отправка уведомления в SUPPORT_CHAT_ID >>>>>>> : {SUPPORT_CHAT_ID}"
     )
-    logging.info("")
-    await bot.send_message(
-        chat_id=SUPPORT_CHAT_ID,
-        text=(
-            f"🔥 <b>Новый заказ!</b> 🔥\n\n"
-            f"👤 <b>Пользователь:</b> {user_name}\n"
-            f"📅 <b>Дата:</b> {formatted_date} "
-            f"{slot.time_start.strftime('%H:%M')}-"
-            f"{slot.time_end.strftime('%H:%M')}\n"
-            f"📘 <b>Предмет:</b> {subject_name}\n"
-            f"💬 <b>Комментарий:</b> {'Не указан' if not comment else comment}"
-        ),
-        parse_mode='HTML'
-    )
+
+    # Отправляем уведомление в чат поддержки
+    try:
+        await bot.send_message(
+            chat_id=SUPPORT_CHAT_ID,
+            text=(
+                f"🔥 <b>Новый заказ!</b> 🔥\n\n"
+                f"👤 <b>Пользователь:</b> {user_name}\n"
+                f"📅 <b>Дата:</b> {formatted_date} "
+                f"{slot.time_start.strftime('%H:%M')}-"
+                f"{slot.time_end.strftime('%H:%M')}\n"
+                f"📘 <b>Предмет:</b> {subject_name}\n"
+                f"💬 <b>Комментарий:</b> "
+                f"{'Не указан' if not comment else comment}"
+            ),
+            parse_mode='HTML',
+            reply_markup=answer_button(user_id, user_name)
+        )
+        logging.info("Уведомление успешно отправлено в чат поддержки.")
+    except TelegramBadRequest as e:
+        logging.error(f"Ошибка при отправке уведомления в чат поддержки: {e}")
 
     # Очистка состояния
     await state.clear()

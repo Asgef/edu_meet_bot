@@ -36,7 +36,6 @@ async def get_client_question(message: Message, state: FSMContext) -> None:
 
 @router.callback_query(F.data.startswith('answer|'))
 async def on_answer_click(callback: CallbackQuery, state: FSMContext) -> None:
-    # logging.info(f'++++++++++++++++++++ {callback.data}')
     callback_data = callback.data.split('|')
     user_id, user_name = int(callback_data[1]), callback_data[2]
     await state.update_data(user_id=user_id, user_name=user_name)
