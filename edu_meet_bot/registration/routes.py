@@ -35,9 +35,7 @@ async def receive_registration_request(message: Message) -> None:
         "📅 <i>Выберите удобный день и время для занятия.</i>\n\n"
         "⚠️ После предоплаты 50% ваш заказ будет подтверждён.\n\n"
         "➡️ <b>Начнём?</b>",
-        reply_markup=select_date(
-            user_id=message.from_user.id, user_name=message.from_user.username
-        ),
+        reply_markup=select_date(),
         parse_mode="HTML"
     )
 
@@ -109,7 +107,9 @@ async def on_select_week_click(callback: CallbackQuery) -> None:
     keyboard = select_day(
         period=days,
         label_func=lambda day: f"📅 {day.strftime('%A, %d.%m.%Y')}",
-        callback_prefix="select_day"
+        callback_prefix="select_day",
+        week_start=week_start_str,
+        week_end=week_end_str
     )
 
     # Отправляем сообщение с выбором дня
@@ -128,7 +128,7 @@ async def on_select_week_click(callback: CallbackQuery) -> None:
 @handle_exceptions
 async def on_select_day_click(callback: CallbackQuery) -> None:
     # Извлекаем дату дня из callback_data
-    _, day_str = callback.data.split('|')
+    _, day_str, week_start_str, week_end_str = callback.data.split('|')
     selected_day = datetime.fromisoformat(day_str).date()
 
     async with async_session() as db_session:
@@ -149,7 +149,9 @@ async def on_select_day_click(callback: CallbackQuery) -> None:
         label_func=lambda
         slot: f"🕒 {slot.time_start.strftime('%H:%M')} - "
               f"{slot.time_end.strftime('%H:%M')}",
-        callback_prefix="select_slot"
+        callback_prefix="select_slot",
+        week_start=week_start_str,
+        week_end=week_end_str
     )
 
     # Отправляем сообщение с выбором времени

@@ -6,11 +6,11 @@ from datetime import date
 from edu_meet_bot.session.models import Slot, AcademicSubject
 
 
-def select_date(user_id: int, user_name):
+def select_date():
     kb = InlineKeyboardBuilder()
     kb.button(
         text="📅 Выбрать дату",  # Добавляем иконку для ясности
-        callback_data=f"select_date|{user_id}|{user_name}"
+        callback_data=f"select_date|"
     )
     return kb.as_markup()
 
@@ -46,7 +46,9 @@ def select_week(
 def select_day(
     period: Dict[date, List[Slot]],
     label_func: Callable[[date], str],
-    callback_prefix: str
+    callback_prefix: str,
+    week_start,
+    week_end
 ) -> InlineKeyboardMarkup:
 
     keyboard = InlineKeyboardMarkup(inline_keyboard=[])
@@ -55,16 +57,28 @@ def select_day(
         keyboard.inline_keyboard.append([
             InlineKeyboardButton(
                 text=period_label,
-                callback_data=f"{callback_prefix}|{period_start.isoformat()}"
+                callback_data=(
+                    f"{callback_prefix}|{period_start.isoformat()}|"
+                    f"{week_start}|{week_end}"
+                )
             )
         ])
+    keyboard.inline_keyboard.append([
+        InlineKeyboardButton(
+            text="Назад",
+            callback_data=f"select_date|"
+        )
+    ])
     return keyboard
 
 
 def select_slot(
         slots: List[Slot],
         label_func: Callable[[Slot], str],
-        callback_prefix: str
+        callback_prefix: str,
+        week_start,
+        week_end
+
 ) -> InlineKeyboardMarkup:
     keyboard = InlineKeyboardMarkup(inline_keyboard=[])
     for slot in slots:
@@ -77,6 +91,12 @@ def select_slot(
                               f"{slot.date.isoformat()}"
             )
         ])
+    keyboard.inline_keyboard.append([
+        InlineKeyboardButton(
+            text="Назад",
+            callback_data=f"select_week|{week_start}|{week_end}"
+        )
+    ])
     return keyboard
 
 
