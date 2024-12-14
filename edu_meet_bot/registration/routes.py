@@ -261,8 +261,11 @@ async def on_skip_comment(callback: CallbackQuery, state: FSMContext) -> None:
     # Подтверждаем обработку callback-запроса
     await callback.answer()
 
+    comment = ''
+    await state.update_data(comment=comment)
+
     # Подтверждаем регистрацию с пустым комментарием
-    await confirm_registration(callback.message, state)
+    await confirm_registration(callback.message, state, is_callback=True)
 
 
 @router.message(StateFilter("waiting_for_comment"))
@@ -286,30 +289,52 @@ async def on_comment_entered(message: Message, state: FSMContext) -> None:
             logging.error(f"Не удалось удалить сообщение: {e}")
 
     # Переходим к подтверждению
-    await confirm_registration(message, state)
+    await confirm_registration(message, state, is_callback=False)
 
 
-async def confirm_registration(message: Message, state: FSMContext) -> None:
+async def confirm_registration(
+        message: Message, state: FSMContext, is_callback: bool
+) -> None:
     data = await state.get_data()
 
-    await message.answer(
+    confirmation_text = (
         f"✅ <b>Проверьте данные:</b>\n\n"
         f"📘 <b>Предмет:</b> {data['subject_name']}\n"
         f"📅 <b>Дата:</b> {data['slot_date']}\n"
         f"⏰ <b>Время:</b> {data['slot_time']}\n"
-        f"💬 <b>Комментарий:</b> {data.get('comment', 'Не указан')}\n\n"
+        f"💬 <b>Комментарий:</b> "
+        f"{'Не указан' if not data['comment'] else data['comment']}\n\n"
         f"💵 <b>Цена:</b> {PRICE} ₽ / час\n"
         "⚠️ После предоплаты 50% ваш заказ будет подтверждён.\n\n"
-        "💡 Нажмите 'Подтвердить', чтобы завершить регистрацию.",
-        reply_markup=InlineKeyboardMarkup(
-            inline_keyboard=[
-                [InlineKeyboardButton(
-                    text="Подтвердить", callback_data="confirm_registration"
-                )]
-            ]
-        ),
-        parse_mode="HTML"
+        "💡 Нажмите 'Подтвердить', чтобы завершить регистрацию."
     )
+
+    # Отправляем финальное сообщение
+    if is_callback:
+        await message.edit_text(
+            confirmation_text,
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [InlineKeyboardButton(
+                        text="Подтвердить", callback_data="confirm_registration"
+                    )]
+                ]
+            ),
+            parse_mode="HTML"
+        )
+    else:
+        await message.answer(
+            confirmation_text,
+            reply_markup=InlineKeyboardMarkup(
+                inline_keyboard=[
+                    [InlineKeyboardButton(
+                        text="Подтвердить", callback_data="confirm_registration"
+                    )]
+                ]
+            ),
+            parse_mode="HTML"
+        )
+
     await state.set_state("registration_confirmed")
 
 
@@ -323,31 +348,34 @@ async def registration(callback: CallbackQuery, state: FSMContext) -> None:
 
     # Проверяем статус слота
     async with async_session() as db_session:
-        slot = await db_session.get(Slot, data["slot_id"])
-        if slot.status != SlotStatus.AVAILABLE:
-            await callback.answer(
-                "❌ Слот уже занят. Пожалуйста, "
-                "повторите регистрацию и выберите другой слот."
+        try:
+            slot = await db_session.get(Slot, data["slot_id"])
+            if slot.status != SlotStatus.AVAILABLE:
+                await callback.answer(
+                    "❌ Слот уже занят. Пожалуйста, "
+                    "повторите регистрацию и выберите другой слот."
+                )
+                await state.clear()
+                return
+
+            # Обновляем статус слота
+            slot.status = SlotStatus.PENDING
+            slot.student_id = data["student_id"]
+
+            # Создаём заказ
+            order = Order(
+                student_id=data["student_id"],
+                tutor_id=data["tutor_id"],
+                slot_id=data["slot_id"],
+                subject_id=data["subject_id"],
+                status=OrderStatus.PENDING,
+                comment=data.get("comment"),
+                date=slot.date,
             )
-            await state.clear()
-            return
-
-    # Обновляем статус слота
-    slot.status = SlotStatus.PENDING
-    slot.student_id = data["student_id"]
-
-    # Создаём заказ
-    order = Order(
-        student_id=data["student_id"],
-        tutor_id=data["tutor_id"],
-        slot_id=data["slot_id"],
-        subject_id=data["subject_id"],
-        status=OrderStatus.PENDING,
-        comment=data.get("comment"),
-        date=slot.date,
-    )
-    db_session.add(order)
-    await db_session.commit()
+            db_session.add(order)
+            await db_session.commit()
+        finally:
+            await db_session.close()
 
     registration_message = (
         f"✅ <b>Вы успешно зарегистрировались на занятие!</b>\n\n"
@@ -360,7 +388,7 @@ async def registration(callback: CallbackQuery, state: FSMContext) -> None:
     )
 
     # отправляем соответствующее сообщение пользователю
-    await callback.message.answer(registration_message, parse_mode="HTML")
+    await callback.message.edit_text(registration_message, parse_mode="HTML")
 
     # Логирование отправки уведомления
     logging.info(
