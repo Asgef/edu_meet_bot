@@ -14,7 +14,7 @@ from edu_meet_bot.registration.utils import (
 )
 from edu_meet_bot.registration.views import (
     select_week, select_slot, select_day, register_button,
-    register_button_academic_subject, select_date
+    academic_subject_button, select_date
 )
 from aiogram.types import (
     Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
@@ -28,21 +28,68 @@ router = Router(name="edu_meet_bot/registration")
 
 
 @router.message(F.text == "Записаться на занятие")
-async def receive_registration_request(message: Message) -> None:
+@handle_exceptions
+async def on_register_subject_click(
+        message: Message, state: FSMContext
+) -> None:
+    await state.clear() # Предварительно очищаем состояние
+
+    # Подготавливаем данные пользователя и сохраняем в состояние
+    user = message.from_user
+    student_tg_id = user.id
+    username = user.username
+    user_first_name = user.first_name
+    student_name = username if username else user_first_name
+
+    async with async_session() as db_session:
+        student_id = await get_usr_id(db_session, student_tg_id)
+        tutor_id = await get_usr_id(db_session, TUTOR_TG_ID)
+
+    await state.update_data(
+        student_name=student_name, student_id=student_id,
+        student_tg_id=student_tg_id, tutor_id=tutor_id
+    )
+
+    # Получаем список предметов
+    async with async_session() as db_session:
+        subjects = await get_academic_subjects(db_session)
+
+    # Создаем клавиатуру для выбора предмета
+    keyboard = academic_subject_button(subjects)
+
+    # Отправляем сообщение пользователю
     await message.answer(
-        "🎓 <b>Запись на занятие</b>\n\n"
-        f"💵 <b>Цена:</b> {PRICE} ₽ / час\n"
-        "📅 <i>Выберите удобный день и время для занятия.</i>\n\n"
-        "⚠️ После предоплаты 50% ваш заказ будет подтверждён.\n\n"
-        "➡️ <b>Начнём?</b>",
-        reply_markup=select_date(),
+        "📘 <b>Выберите учебный предмет:</b>\n\n"
+        "⬇️ Нажмите на один из вариантов ниже.",
+        reply_markup=keyboard,
         parse_mode="HTML"
     )
+    # Ждём нажатия кнопки
+    await state.set_state("waiting_for_subject")
+
+
+@router.callback_query(F.data == "back_to_subjects")
+@handle_exceptions
+async def back_to_subjects(callback: CallbackQuery, state: FSMContext) -> None:
+    # Перенаправляем на хендлер выбора предмета
+    await on_register_subject_click(callback.message, state)
 
 
 @router.callback_query(F.data.startswith('select_date|'))
-@handle_exceptions
-async def on_select_date_click(callback: CallbackQuery) -> None:
+async def on_subject_selected(callback: CallbackQuery, state: FSMContext) -> None:
+    parts = callback.data.split('|')
+
+    if len(parts) == 3:
+        # Если данные о предмете пришли
+        # Извлекаем информацию о выбранном предмете и запоминаем ее
+        _, subject_id_str, subject_name = parts
+        subject_id = int(subject_id_str)
+        # Сохраняем выбранный предмет в состояние
+        await state.update_data(
+            subject_id=subject_id, subject_name=subject_name
+        )
+
+    # Если произошёл возврат из кнопки "Назад", просто продолжаем
     today = datetime.now().date()  # Текущая дата
     now_time = datetime.now().time()  # Текущее время
     logging.info(f'Сегодня >>>>>>>>>>>>>: {today}, Текущее время: {now_time}')
@@ -167,61 +214,17 @@ async def on_select_day_click(callback: CallbackQuery) -> None:
 
 @router.callback_query(F.data.startswith('select_slot|'))
 @handle_exceptions
-async def on_select_slot_click(callback: CallbackQuery) -> None:
-    # Извлекаем данные из callback_data
-    _, slot_id, slot_time, slot_date = callback.data.split('|')
-    slot_id = int(slot_id)
-
-    # Отправляем сообщение с информацией о выбранном слоте
-    await callback.message.edit_text(
-        f"🎓 <b>Регистрация на занятие!</b>\n\n"
-        f"📅 <b>Дата:</b> {slot_date}\n"
-        f"⏰ <b>Время:</b> {slot_time}\n\n"
-        f"📘 <i>Выберите учебный предмет на следующем шаге.</i>",
-        reply_markup=register_button(slot_id),
-        parse_mode="HTML"
-    )
-
-
-@router.callback_query(F.data.startswith('register_academic_subject|'))
-@handle_exceptions
-async def on_register_subject_click(
-        callback: CallbackQuery, state: FSMContext
-) -> None:
-    # Извлекаем slot_id из callback_data
-    _, slot_id = callback.data.split('|')
-    slot_id = int(slot_id)
-
-    # Сохраняем slot_id в FSM
-    await state.update_data(slot_id=slot_id)
-
-    # Получаем список предметов
-    async with async_session() as db_session:
-        subjects = await get_academic_subjects(db_session)
-
-    # Создаем клавиатуру для выбора предмета
-    keyboard = register_button_academic_subject(subjects)
-
-    # Отправляем сообщение пользователю
-    await callback.message.edit_text(
-        "📘 <b>Выберите учебный предмет:</b>\n\n"
-        "⬇️ Нажмите на один из вариантов ниже.",
-        reply_markup=keyboard,
-        parse_mode="HTML"
-    )
-
-
-@router.callback_query(F.data.startswith('select_subject|'))
-@handle_exceptions
 async def on_subject_selected(
         callback: CallbackQuery, state: FSMContext
 ) -> None:
-    # Извлекаем subject_id из callback_data
-    _, subject_id, subject_name = callback.data.split('|')
-    subject_id = int(subject_id)
+    # Извлекаем слот и предмет из callback_data
+    _, slot_id, slot_time, slot_date = callback.data.split('|')
+    slot_id = int(slot_id)
 
-    # Сохраняем subject_id в FSM
-    await state.update_data(subject_id=subject_id, subject_name=subject_name)
+    # Сохраняем слот в FSM
+    await state.update_data(
+        slot_id=slot_id, slot_time=slot_time, slot_date=slot_date
+    )
 
     # Создаём клавиатуру с кнопкой "Пропустить"
     keyboard = InlineKeyboardMarkup(
@@ -259,21 +262,10 @@ async def on_skip_comment(callback: CallbackQuery, state: FSMContext) -> None:
 
     # Извлекаем данные из FSM
     data = await state.get_data()
-    slot_id = data["slot_id"]
-    subject_id = data["subject_id"]
-    subject_name = data["subject_name"]
 
-    logging.info(f"Callback user id >>>>>: {callback.from_user.id}")
 
-    # Завершаем регистрацию с пустым комментарием
-    await finish_registration(
-        state=state,
-        message_object=callback,
-        slot_id=slot_id,
-        subject_id=subject_id,
-        subject_name=subject_name,
-        comment=""
-    )
+    #Завершаем регистрацию с пустым комментарием
+    await confirm_registration(callback.message, state)
 
 
 @router.message(StateFilter("waiting_for_comment"))
@@ -281,118 +273,97 @@ async def on_skip_comment(callback: CallbackQuery, state: FSMContext) -> None:
 async def on_comment_entered(message: Message, state: FSMContext) -> None:
     # Получаем введённый комментарий
     comment = message.text
+    await state.update_data(comment=comment)
 
     # Извлекаем данные из FSM
     data = await state.get_data()
-    slot_id = data["slot_id"]
-    subject_id = data["subject_id"]
-    subject_name = data["subject_name"]
 
     # Удаляем предыдущее сообщение с "Пропустить", если оно существует
     skip_message_id = data.get("skip_message_id")
     if skip_message_id:
         try:
-            await message.bot.delete_message(chat_id=message.chat.id,
-                                             message_id=skip_message_id)
+            await message.bot.delete_message(
+                chat_id=message.chat.id, message_id=skip_message_id
+            )
         except Exception as e:
             logging.error(f"Не удалось удалить сообщение: {e}")
 
-    # Завершаем регистрацию с введённым комментарием
-    await finish_registration(
-        state=state,
-        message_object=message,
-        slot_id=slot_id,
-        subject_id=subject_id,
-        subject_name=subject_name,
-        comment=comment
+    # Переходим к подтверждению
+    await confirm_registration(message, state)
+
+
+
+async def confirm_registration(message: Message, state: FSMContext) -> None:
+    data = await state.get_data()
+
+    await message.answer(
+        f"✅ <b>Проверьте данные:</b>\n\n"
+        f"📘 <b>Предмет:</b> {data['subject_name']}\n"
+        f"📅 <b>Дата:</b> {data['slot_date']}\n"
+        f"⏰ <b>Время:</b> {data['slot_time']}\n"
+        f"💬 <b>Комментарий:</b> {data.get('comment', 'Не указан')}\n\n"
+         f"💵 <b>Цена:</b> {PRICE} ₽ / час\n"
+         "⚠️ После предоплаты 50% ваш заказ будет подтверждён.\n\n"
+        "💡 Нажмите 'Подтвердить', чтобы завершить регистрацию.",
+        reply_markup=InlineKeyboardMarkup(
+            inline_keyboard=[
+                [InlineKeyboardButton(
+                    text="Подтвердить", callback_data="confirm_registration"
+                )]
+            ]
+        ),
+        parse_mode="HTML"
     )
+    await state.set_state("registration_confirmed")
 
 
-async def finish_registration(
-        state: FSMContext,
-        message_object: Message | CallbackQuery,
-        slot_id: int,
-        subject_id: int,
-        subject_name: str,
-        comment: str,
-) -> None:
+@router.callback_query(F.data == "confirm_registration")
+@handle_exceptions
+async def registration(callback: CallbackQuery, state: FSMContext) -> None:
+    data = await state.get_data()
+
+    # Логирование для отладки
+    logging.info(f"Registration data >>>>>>>>>>>>>>>>>>>>: {data}")
+
+
+    # Проверяем статус слота
     async with async_session() as db_session:
-        # Извлекаем информацию о пользователе
-        user = message_object.from_user
-        user_id = user.id
-        username = user.username
-        user_first_name = user.first_name
-        user_name = username if username else user_first_name
-
-        # Логирование для отладки
-        logging.info(
-            f"from_user: ID={user_id}, Username={username}, "
-            f"First Name={user_first_name}"
-        )
-
-        # Получаем student_id по user_id
-        student_id = await get_usr_id(db_session, user_id)
-        logging.info(
-            f"Resolved student_id: {student_id} "
-            f"for user_id >>>>>>>>>>>>: {user_id}"
-        )
-
-        if not student_id:
-            await message_object.answer(
-                "❌ Ошибка: не удалось найти пользователя в базе данных."
-            )
-            await state.clear()
-            return
-
-        tutor_id = await get_usr_id(db_session, TUTOR_TG_ID)
-        slot = await db_session.get(Slot, slot_id)
-
-        # Проверяем статус слота
+        slot = await db_session.get(Slot, data["slot_id"])
         if slot.status != SlotStatus.AVAILABLE:
-            await message_object.answer(
-                "❌ Слот уже занят. Пожалуйста, выберите другой."
+            await callback.answer(
+                "❌ Слот уже занят. Пожалуйста, повторите регистрацию и выберите другой слот."
             )
             await state.clear()
             return
 
-        # Обновляем статус слота
-        slot.status = SlotStatus.PENDING
-        slot.student_id = student_id
+    # Обновляем статус слота
+    slot.status = SlotStatus.PENDING
+    slot.student_id = data["student_id"]
 
-        # Создаём заказ
-        order = Order(
-            student_id=student_id,
-            tutor_id=tutor_id,
-            slot_id=slot_id,
-            subject_id=subject_id,
-            status=OrderStatus.PENDING,
-            comment=comment,
-            date=slot.date,
-        )
-        db_session.add(order)
-        await db_session.commit()
+    # Создаём заказ
+    order = Order(
+        student_id=data["student_id"],
+        tutor_id=data["tutor_id"],
+        slot_id=data["slot_id"],
+        subject_id=data["subject_id"],
+        status=OrderStatus.PENDING,
+        comment=data.get("comment"),
+        date=slot.date,
+    )
+    db_session.add(order)
+    await db_session.commit()
 
-    # Форматируем дату для сообщения
-    formatted_date = slot.date.strftime("%d.%m.%Y")
     registration_message = (
         f"✅ <b>Вы успешно зарегистрировались на занятие!</b>\n\n"
-        f"📅 <b>Дата:</b> {formatted_date} "
+        f"📅 <b>Дата:</b> {data["slot_date"]} "
         f"{slot.time_start.strftime('%H:%M')}-"
         f"{slot.time_end.strftime('%H:%M')}\n"
-        f"📘 <b>Предмет:</b> {subject_name}\n"
-        f"💬 <b>Комментарий:</b> {'Не указан' if not comment else comment}"
+        f"📘 <b>Предмет:</b> {data['subject_name']}\n"
+        f"💬 <b>Комментарий:</b> {'Не указан' if not data['comment'] else data['comment']}"
     )
 
-    # Определяем тип message_object
-    # и отправляем соответствующее сообщение пользователю
-    if isinstance(message_object, CallbackQuery):
-        await message_object.message.edit_text(
-            registration_message, parse_mode="HTML"
-        )
-        bot = message_object.bot
-    else:
-        await message_object.answer(registration_message, parse_mode="HTML")
-        bot = message_object.bot  # Получаем бот из Message
+    # отправляем соответствующее сообщение пользователю
+    await callback.message.answer(registration_message, parse_mode="HTML")
 
     # Логирование отправки уведомления
     logging.info(
@@ -400,21 +371,24 @@ async def finish_registration(
     )
 
     # Отправляем уведомление в чат поддержки
+    bot = callback.bot
     try:
         await bot.send_message(
             chat_id=SUPPORT_CHAT_ID,
             text=(
                 f"🔥 <b>Новый заказ!</b> 🔥\n\n"
-                f"👤 <b>Пользователь:</b> {user_name}\n"
-                f"📅 <b>Дата:</b> {formatted_date} "
+                f"👤 <b>Пользователь:</b> {data['student_name']}\n"
+                f"📅 <b>Дата:</b> {data["slot_date"]} "
                 f"{slot.time_start.strftime('%H:%M')}-"
                 f"{slot.time_end.strftime('%H:%M')}\n"
-                f"📘 <b>Предмет:</b> {subject_name}\n"
+                f"📘 <b>Предмет:</b> {data['subject_name']}\n"
                 f"💬 <b>Комментарий:</b> "
-                f"{'Не указан' if not comment else comment}"
+                f"{'Не указан' if not data['comment'] else data['comment']}"
             ),
             parse_mode='HTML',
-            reply_markup=answer_button(user_id, user_name)
+            reply_markup=answer_button(
+                data["student_tg_id"], data["student_name"]
+            )
         )
         logging.info("Уведомление успешно отправлено в чат поддержки.")
     except TelegramBadRequest as e:

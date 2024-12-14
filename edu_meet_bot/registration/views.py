@@ -40,6 +40,13 @@ def select_week(
             )
         ])
 
+    keyboard.inline_keyboard.append([
+        InlineKeyboardButton(
+            text="🔙 Назад",
+            callback_data="back_to_subjects"
+        )
+    ])
+
     return keyboard
 
 
@@ -65,7 +72,7 @@ def select_day(
         ])
     keyboard.inline_keyboard.append([
         InlineKeyboardButton(
-            text="Назад",
+            text="🔙 Назад",
             callback_data=f"select_date|"
         )
     ])
@@ -93,7 +100,7 @@ def select_slot(
         ])
     keyboard.inline_keyboard.append([
         InlineKeyboardButton(
-            text="Назад",
+            text="🔙 Назад",
             callback_data=f"select_week|{week_start}|{week_end}"
         )
     ])
@@ -113,14 +120,15 @@ def register_button(slot_id: int) -> InlineKeyboardMarkup:
     )
 
 
-def register_button_academic_subject(
+# +
+def academic_subject_button(
         subjects: List[AcademicSubject]
 ) -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(
         inline_keyboard=[
             [InlineKeyboardButton(
                 text=f"📚 {sub.name}",
-                callback_data=f"select_subject|{sub.id}|{sub.name}"
+                callback_data=f"select_date|{sub.id}|{sub.name}"
             )]
             for sub in subjects
         ]
