@@ -1,18 +1,8 @@
 import logging
-from aiogram.utils.keyboard import InlineKeyboardBuilder
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from typing import Dict, List, Callable
 from datetime import date
 from edu_meet_bot.session.models import Slot, AcademicSubject
-
-
-def select_date():
-    kb = InlineKeyboardBuilder()
-    kb.button(
-        text="📅 Выбрать дату",  # Добавляем иконку для ясности
-        callback_data=f"select_date|"
-    )
-    return kb.as_markup()
 
 
 def select_week(
@@ -73,7 +63,7 @@ def select_day(
     keyboard.inline_keyboard.append([
         InlineKeyboardButton(
             text="🔙 Назад",
-            callback_data=f"select_date|"
+            callback_data="select_date|"
         )
     ])
     return keyboard
@@ -107,20 +97,6 @@ def select_slot(
     return keyboard
 
 
-def register_button(slot_id: int) -> InlineKeyboardMarkup:
-    return InlineKeyboardMarkup(
-        inline_keyboard=[
-            [
-                InlineKeyboardButton(
-                    text='✅ Регистрация',
-                    callback_data=f'register_academic_subject|{slot_id}'
-                )
-            ]
-        ]
-    )
-
-
-# +
 def academic_subject_button(
         subjects: List[AcademicSubject]
 ) -> InlineKeyboardMarkup:

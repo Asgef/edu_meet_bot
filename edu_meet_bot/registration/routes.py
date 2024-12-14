@@ -13,8 +13,7 @@ from edu_meet_bot.registration.utils import (
     handle_exceptions, get_academic_subjects, get_usr_id, get_daily_slots
 )
 from edu_meet_bot.registration.views import (
-    select_week, select_slot, select_day, register_button,
-    academic_subject_button, select_date
+    select_week, select_slot, select_day, academic_subject_button
 )
 from aiogram.types import (
     Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
@@ -32,7 +31,7 @@ router = Router(name="edu_meet_bot/registration")
 async def on_register_subject_click(
         message: Message, state: FSMContext
 ) -> None:
-    await state.clear() # Предварительно очищаем состояние
+    await state.clear()  # Предварительно очищаем состояние
 
     # Подготавливаем данные пользователя и сохраняем в состояние
     user = message.from_user
@@ -76,7 +75,9 @@ async def back_to_subjects(callback: CallbackQuery, state: FSMContext) -> None:
 
 
 @router.callback_query(F.data.startswith('select_date|'))
-async def on_subject_selected(callback: CallbackQuery, state: FSMContext) -> None:
+async def on_subject_selected(
+        callback: CallbackQuery, state: FSMContext
+) -> None:
     parts = callback.data.split('|')
 
     if len(parts) == 3:
@@ -214,7 +215,7 @@ async def on_select_day_click(callback: CallbackQuery) -> None:
 
 @router.callback_query(F.data.startswith('select_slot|'))
 @handle_exceptions
-async def on_subject_selected(
+async def on_slot_selected(
         callback: CallbackQuery, state: FSMContext
 ) -> None:
     # Извлекаем слот и предмет из callback_data
@@ -260,11 +261,7 @@ async def on_skip_comment(callback: CallbackQuery, state: FSMContext) -> None:
     # Подтверждаем обработку callback-запроса
     await callback.answer()
 
-    # Извлекаем данные из FSM
-    data = await state.get_data()
-
-
-    #Завершаем регистрацию с пустым комментарием
+    # Подтверждаем регистрацию с пустым комментарием
     await confirm_registration(callback.message, state)
 
 
@@ -292,7 +289,6 @@ async def on_comment_entered(message: Message, state: FSMContext) -> None:
     await confirm_registration(message, state)
 
 
-
 async def confirm_registration(message: Message, state: FSMContext) -> None:
     data = await state.get_data()
 
@@ -302,8 +298,8 @@ async def confirm_registration(message: Message, state: FSMContext) -> None:
         f"📅 <b>Дата:</b> {data['slot_date']}\n"
         f"⏰ <b>Время:</b> {data['slot_time']}\n"
         f"💬 <b>Комментарий:</b> {data.get('comment', 'Не указан')}\n\n"
-         f"💵 <b>Цена:</b> {PRICE} ₽ / час\n"
-         "⚠️ После предоплаты 50% ваш заказ будет подтверждён.\n\n"
+        f"💵 <b>Цена:</b> {PRICE} ₽ / час\n"
+        "⚠️ После предоплаты 50% ваш заказ будет подтверждён.\n\n"
         "💡 Нажмите 'Подтвердить', чтобы завершить регистрацию.",
         reply_markup=InlineKeyboardMarkup(
             inline_keyboard=[
@@ -325,13 +321,13 @@ async def registration(callback: CallbackQuery, state: FSMContext) -> None:
     # Логирование для отладки
     logging.info(f"Registration data >>>>>>>>>>>>>>>>>>>>: {data}")
 
-
     # Проверяем статус слота
     async with async_session() as db_session:
         slot = await db_session.get(Slot, data["slot_id"])
         if slot.status != SlotStatus.AVAILABLE:
             await callback.answer(
-                "❌ Слот уже занят. Пожалуйста, повторите регистрацию и выберите другой слот."
+                "❌ Слот уже занят. Пожалуйста, "
+                "повторите регистрацию и выберите другой слот."
             )
             await state.clear()
             return
@@ -359,7 +355,8 @@ async def registration(callback: CallbackQuery, state: FSMContext) -> None:
         f"{slot.time_start.strftime('%H:%M')}-"
         f"{slot.time_end.strftime('%H:%M')}\n"
         f"📘 <b>Предмет:</b> {data['subject_name']}\n"
-        f"💬 <b>Комментарий:</b> {'Не указан' if not data['comment'] else data['comment']}"
+        f"💬 <b>Комментарий:</b> "
+        f"{'Не указан' if not data['comment'] else data['comment']}"
     )
 
     # отправляем соответствующее сообщение пользователю
