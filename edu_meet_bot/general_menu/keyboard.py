@@ -10,6 +10,7 @@ def main_menu_view(is_admin: bool = False):
     kb.button(text="О Нике")
     kb.add(KeyboardButton(text="Связаться с репетитором"))
     kb.button(text="Записаться на занятие")
+    kb.button(text="Мои занятия")
 
     if is_admin:
         kb.button(text="Админ панель")

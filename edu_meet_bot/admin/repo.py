@@ -1,5 +1,5 @@
 from sqlalchemy import exists, select, update, Update, Select
-from edu_meet_bot.session.models import User
+from edu_meet_bot.general_menu.models import User
 
 
 def is_user_admin_by_tg_id(tg_id: int) -> Select:

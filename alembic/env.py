@@ -7,7 +7,7 @@ from alembic import context
 from dotenv import load_dotenv
 from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
-from edu_meet_bot.session.models import User, AcademicSubject, Slot, Order  # noqa F401
+from edu_meet_bot.general_menu.models import User, AcademicSubject, Slot, Order  # noqa F401
 
 
 load_dotenv()

@@ -4,7 +4,7 @@ from sqlalchemy.orm import Mapped, mapped_column, relationship
 from sqlalchemy.sql import func
 from sqlalchemy.sql.sqltypes import Date, Time
 from edu_meet_bot.base_model import BaseModel
-from edu_meet_bot.session.enum_fields import SlotStatus, OrderStatus
+from edu_meet_bot.general_menu.enum_fields import SlotStatus, OrderStatus
 from sqlalchemy import Enum as SQLAlchemyEnum
 
 

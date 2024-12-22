@@ -2,7 +2,7 @@ import logging
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton
 from typing import Dict, List, Callable
 from datetime import date
-from edu_meet_bot.session.models import Slot, AcademicSubject
+from edu_meet_bot.general_menu.models import Slot, AcademicSubject
 
 
 def select_week(

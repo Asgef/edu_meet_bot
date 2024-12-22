@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from edu_meet_bot.session.models import User
+from edu_meet_bot.general_menu.models import User
 from edu_meet_bot.admin.repo import get_user_by_tg_id
 from edu_meet_bot.db import async_session
 from sqlalchemy.sql import func

@@ -4,7 +4,7 @@ from edu_meet_bot import settings
 from aiogram import Router, F, Bot
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, User, FSInputFile
-from edu_meet_bot.session.views import main_menu_view
+from edu_meet_bot.general_menu.keyboard import main_menu_view
 
 
 router = Router(name="edu_meet_bot")

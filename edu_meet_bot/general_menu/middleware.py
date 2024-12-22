@@ -2,7 +2,7 @@ from typing import Any, Awaitable, Callable, Dict
 from aiogram import BaseMiddleware
 from aiogram.types import Message
 from edu_meet_bot.admin.service import is_user_admin
-from edu_meet_bot.session.service import touch_user
+from edu_meet_bot.general_menu.service import touch_user
 
 
 class UserActivityMiddleware(BaseMiddleware):

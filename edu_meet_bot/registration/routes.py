@@ -2,17 +2,17 @@ from aiogram import Router, F
 from datetime import datetime
 from edu_meet_bot.db import async_session
 from aiogram.fsm.context import FSMContext
-from edu_meet_bot.session.enum_fields import OrderStatus, SlotStatus
+from edu_meet_bot.general_menu.enum_fields import OrderStatus, SlotStatus
 from edu_meet_bot.settings import TUTOR_TG_ID, PRICE, SUPPORT_CHAT_ID
-from edu_meet_bot.session.models import Order, Slot
+from edu_meet_bot.general_menu.models import Order, Slot
 from aiogram.filters.state import StateFilter
-from edu_meet_bot.support.views import answer_button
+from edu_meet_bot.support.keyboard import answer_button
 from aiogram.exceptions import TelegramBadRequest
 from edu_meet_bot.registration.utils import (
     get_available_slots, group_slots_by_time_period, handle_no_slots,
     handle_exceptions, get_academic_subjects, get_usr_id, get_daily_slots
 )
-from edu_meet_bot.registration.views import (
+from edu_meet_bot.registration.keyboard import (
     select_week, select_slot, select_day, academic_subject_button
 )
 from aiogram.types import (

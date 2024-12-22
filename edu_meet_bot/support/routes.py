@@ -5,7 +5,7 @@ from edu_meet_bot.support.fsm import StepsQuestionMessage, StepsAnswerMessage
 from aiogram.fsm.context import FSMContext
 from edu_meet_bot import settings
 from edu_meet_bot.support.utils import escape_markdown
-from edu_meet_bot.support.views import answer_button
+from edu_meet_bot.support.keyboard import answer_button
 import logging
 # from edu_meet_bot.debug.utils import log_json_data
 
