@@ -317,6 +317,7 @@ async def confirm_registration(message: Message, state: FSMContext) -> None:
 @handle_exceptions
 async def registration(callback: CallbackQuery, state: FSMContext) -> None:
     data = await state.get_data()
+    comment = data.get("comment", "")
 
     # Логирование для отладки
     logging.info(f"Registration data >>>>>>>>>>>>>>>>>>>>: {data}")
@@ -343,7 +344,7 @@ async def registration(callback: CallbackQuery, state: FSMContext) -> None:
         slot_id=data["slot_id"],
         subject_id=data["subject_id"],
         status=OrderStatus.PENDING,
-        comment=data.get("comment"),
+        comment=comment,
         date=slot.date,
     )
     db_session.add(order)
@@ -356,7 +357,7 @@ async def registration(callback: CallbackQuery, state: FSMContext) -> None:
         f"{slot.time_end.strftime('%H:%M')}\n"
         f"📘 <b>Предмет:</b> {data['subject_name']}\n"
         f"💬 <b>Комментарий:</b> "
-        f"{'Не указан' if not data['comment'] else data['comment']}"
+        f"{'Не указан' if not comment else comment}"
     )
 
     # отправляем соответствующее сообщение пользователю
@@ -380,7 +381,7 @@ async def registration(callback: CallbackQuery, state: FSMContext) -> None:
                 f"{slot.time_end.strftime('%H:%M')}\n"
                 f"📘 <b>Предмет:</b> {data['subject_name']}\n"
                 f"💬 <b>Комментарий:</b> "
-                f"{'Не указан' if not data['comment'] else data['comment']}"
+                f"{'Не указан' if not comment else comment}"
             ),
             parse_mode='HTML',
             reply_markup=answer_button(
