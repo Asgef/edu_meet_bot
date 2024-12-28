@@ -319,7 +319,6 @@ async def registration(callback: CallbackQuery, state: FSMContext) -> None:
     data = await state.get_data()
     comment = data.get("comment", "")
 
-    # Логирование для отладки
     logging.info(f"Registration data >>>>>>>>>>>>>>>>>>>>: {data}")
 
     # Проверяем статус слота
@@ -333,22 +332,22 @@ async def registration(callback: CallbackQuery, state: FSMContext) -> None:
             await state.clear()
             return
 
-    # Обновляем статус слота
-    slot.status = SlotStatus.PENDING
-    slot.student_id = data["student_id"]
+        # Обновляем статус слота
+        slot.status = SlotStatus.PENDING
+        slot.student_id = data["student_id"]
 
-    # Создаём заказ
-    order = Order(
-        student_id=data["student_id"],
-        tutor_id=data["tutor_id"],
-        slot_id=data["slot_id"],
-        subject_id=data["subject_id"],
-        status=OrderStatus.PENDING,
-        comment=comment,
-        date=slot.date,
-    )
-    db_session.add(order)
-    await db_session.commit()
+        # Создаём заказ
+        order = Order(
+            student_id=data["student_id"],
+            tutor_id=data["tutor_id"],
+            slot_id=data["slot_id"],
+            subject_id=data["subject_id"],
+            status=OrderStatus.PENDING,
+            comment=comment,
+            date=slot.date,
+        )
+        db_session.add(order)
+        await db_session.commit()
 
     registration_message = (
         f"✅ <b>Вы успешно зарегистрировались на занятие!</b>\n\n"
@@ -361,7 +360,7 @@ async def registration(callback: CallbackQuery, state: FSMContext) -> None:
     )
 
     # отправляем соответствующее сообщение пользователю
-    await callback.message.answer(registration_message, parse_mode="HTML")
+    await callback.message.edit_text(registration_message, parse_mode="HTML")
 
     # Логирование отправки уведомления
     logging.info(
