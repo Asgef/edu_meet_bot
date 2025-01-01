@@ -50,7 +50,7 @@ class User(BaseModel):
 class Slot(BaseModel):
     __tablename__ = "slot"
 
-    SLOT_CHOICES = ('available', 'pending', 'accepted',)
+    SLOT_CHOICES = ('available', 'pending', 'accepted', 'unavailable')
 
     id: Mapped[int] = mapped_column(primary_key=True, autoincrement=True)
     date: Mapped[date] = mapped_column(Date, nullable=False)
