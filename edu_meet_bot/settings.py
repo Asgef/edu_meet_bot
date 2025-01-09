@@ -1,6 +1,7 @@
 import os
 from dotenv import load_dotenv
 from pathlib import Path
+from edu_meet_bot.utils import get_external_ip
 
 
 load_dotenv()
@@ -25,6 +26,8 @@ ABOUT_MASSAGE = os.getenv('ABOUT_MASSAGE')
 SUPPORT_CHAT_ID = os.getenv('SUPPORT_CHAT_ID')
 
 # webhook settings
-WEBHOOK_HOST = "0.0.0.0"
 WEBHOOK_PATH = "/send_notification"
 WEBHOOK_PORT = 9000
+
+if PRODUCTION:
+    WEBHOOK_HOST = get_external_ip()
