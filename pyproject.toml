@@ -17,6 +17,7 @@ alembic = "^1.13.3"
 databases = "^0.9.0"
 argparse = "^1.4.0"
 greenlet = "^3.1.1"
+requests = "^2.32.3"
 
 [tool.poetry.scripts]
 start = "edu_meet_bot.scripts.run_bot:main"
