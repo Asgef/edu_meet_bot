@@ -45,23 +45,19 @@ async def start_bot() -> None:
 
     if settings.PRODUCTION:
         app = web.Application()
-        app.router.add_post(settings.WEBHOOK_PATH, webhook_handler)
         app["bot"] = bot
+
+        app.router.add_post(settings.WEBHOOK_PATH, webhook_handler)
 
         runner = web.AppRunner(app)
         await runner.setup()
         site = web.TCPSite(
-            runner, host=settings.WEBHOOK_HOST, port=settings.WEBHOOK_PORT
+            runner, host="0.0.0.0", port=settings.WEBHOOK_PORT
         )
         await site.start()
-        logging.info('>>>>>> Bot is running <<<<<<')
-        await on_startup(bot, app)
-        try:
-            while True:
-                await asyncio.sleep(3600)
-        finally:
-            await runner.cleanup()
-            await on_shutdown(bot, app)
+
+        logging.info('>>>>>> Bot is running via webhook <<<<<<')
+        await dp.start_polling(bot)  # Основной функционал бота
     else:
         # Локальная разработка: запуск через polling
         await dp.start_polling(bot)
