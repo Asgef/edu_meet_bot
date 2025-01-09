@@ -6,6 +6,22 @@ from edu_meet_bot.support.routes import router as support_router
 from edu_meet_bot.registration.routes import router as registration_router
 from edu_meet_bot.sessions.routes import router as sessions_router
 from edu_meet_bot.general_menu.middleware import UserActivityMiddleware
+from edu_meet_bot.general_menu.routes import webhook_handler
+import asyncio
+from aiohttp import web
+
+
+# Webhook
+async def on_startup(bot: Bot) -> None:
+    if settings.PRODUCTION:
+        await bot.set_webhook(
+            f'https://{settings.WEBHOOK_HOST}{settings.WEBHOOK_PATH}'
+        )
+
+
+async def on_shutdown(bot: Bot) -> None:
+    if settings.PRODUCTION:
+        await bot.delete_webhook()
 
 
 async def start_bot() -> None:
@@ -26,4 +42,26 @@ async def start_bot() -> None:
     dp.include_router(sessions_router)
     # удаляет вебхук бота и сбрасывает все ожидающие обновления
     # await bot.delete_webhook(drop_pending_updates=True)
-    await dp.start_polling(bot)
+
+    if settings.PRODUCTION:
+        app = web.Application()
+        app.router.add_post(settings.WEBHOOK_PATH, webhook_handler)
+        app["bot"] = bot
+
+        runner = web.AppRunner(app)
+        await runner.setup()
+        site = web.TCPSite(
+            runner, host=settings.WEBHOOK_HOST, port=settings.WEBHOOK_PORT
+        )
+        await site.start()
+        logging.info('>>>>>> Bot is running <<<<<<')
+        await on_startup(bot, app)
+        try:
+            while True:
+                await asyncio.sleep(3600)
+        finally:
+            await runner.cleanup()
+            await on_shutdown(bot, app)
+    else:
+        # Локальная разработка: запуск через polling
+        await dp.start_polling(bot)

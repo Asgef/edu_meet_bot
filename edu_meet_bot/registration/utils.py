@@ -1,5 +1,7 @@
 from collections import defaultdict
-from edu_meet_bot.general_menu.models import Slot, SlotStatus, AcademicSubject, User
+from edu_meet_bot.general_menu.models import (
+    Slot, SlotStatus, AcademicSubject, User
+)
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import date, timedelta, time, datetime
 from sqlalchemy import select

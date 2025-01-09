@@ -9,6 +9,7 @@ DATABASE_URI = os.getenv('DATABASE_URI')
 
 TOKEN = os.getenv('TOKEN')
 DEBUG = os.getenv('DEBUG', 'False') == 'True'
+PRODUCTION = os.getenv('PRODUCTION', 'False') == 'True'
 
 PRICE = os.getenv('PRICE')
 
@@ -22,3 +23,8 @@ ABOUT_MASSAGE = os.getenv('ABOUT_MASSAGE')
 
 
 SUPPORT_CHAT_ID = os.getenv('SUPPORT_CHAT_ID')
+
+# webhook settings
+WEBHOOK_HOST = "0.0.0.0"
+WEBHOOK_PATH = "/send_notification"
+WEBHOOK_PORT = 9000
