@@ -12,7 +12,7 @@ from aiohttp import web
 
 
 # Webhook
-async def on_startup(bot: Bot) -> None:
+async def on_startup(bot: Bot, app: web.Application) -> None:
     if settings.PRODUCTION:
         await bot.set_webhook(
             f'https://{settings.WEBHOOK_HOST}{settings.WEBHOOK_PATH}'
