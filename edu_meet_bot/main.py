@@ -3,25 +3,29 @@ import logging
 from aiogram import Bot, Dispatcher
 from edu_meet_bot.general_menu.routes import router as tutor_router
 from edu_meet_bot.support.routes import router as support_router
-from edu_meet_bot.registration.routes import router as registration_router
 from edu_meet_bot.sessions.routes import router as sessions_router
+from edu_meet_bot.registration.routes import router as registration_router
 from edu_meet_bot.general_menu.middleware import UserActivityMiddleware
-from edu_meet_bot.general_menu.routes import webhook_handler
+from edu_meet_bot.general_menu.routes import notify_handler, web_router
+from aiogram.webhook.aiohttp_server import SimpleRequestHandler
 import asyncio
 from aiohttp import web
 
 
-# Webhook
-async def on_startup(bot: Bot, app: web.Application) -> None:
-    if settings.PRODUCTION:
-        await bot.set_webhook(
-            f'https://{settings.WEBHOOK_HOST}{settings.WEBHOOK_PATH}'
-        )
-
-
-async def on_shutdown(bot: Bot) -> None:
-    if settings.PRODUCTION:
-        await bot.delete_webhook()
+# Notify
+async def start_http_server(bot: Bot) -> None:
+    logging.info(">>>>>>>>>>>>>> Starting http server")
+    app = web.Application()
+    app.add_routes(web_router)
+    app['bot'] = bot
+    runner = web.AppRunner(app)
+    await runner.setup()
+    site = web.TCPSite(runner, "0.0.0.0", settings.NOTIFICATION_PORT)
+    await site.start()
+    logging.info(
+        f'>>>>>> HTTP server is running on http://0.0.0.0:'
+        f'{settings.NOTIFICATION_PORT} <<<<<<'
+    )
 
 
 async def start_bot() -> None:
@@ -44,20 +48,10 @@ async def start_bot() -> None:
     # await bot.delete_webhook(drop_pending_updates=True)
 
     if settings.PRODUCTION:
-        app = web.Application()
-        app["bot"] = bot
-
-        app.router.add_post(settings.WEBHOOK_PATH, webhook_handler)
-
-        runner = web.AppRunner(app)
-        await runner.setup()
-        site = web.TCPSite(
-            runner, host="0.0.0.0", port=settings.WEBHOOK_PORT
+        await asyncio.gather(
+            start_http_server(bot),
+            dp.start_polling(bot)
         )
-        await site.start()
-
-        logging.info('>>>>>> Bot is running via webhook <<<<<<')
-        await dp.start_polling(bot)  # Основной функционал бота
     else:
         # Локальная разработка: запуск через polling
         await dp.start_polling(bot)

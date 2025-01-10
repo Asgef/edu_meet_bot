@@ -26,8 +26,8 @@ ABOUT_MASSAGE = os.getenv('ABOUT_MASSAGE')
 SUPPORT_CHAT_ID = os.getenv('SUPPORT_CHAT_ID')
 
 # webhook settings
-WEBHOOK_PATH = "/send_notification"
-WEBHOOK_PORT = 9000
+NOTIFICATION_PATH = "/send_notification"
+NOTIFICATION_PORT = 9000
 
 if PRODUCTION:
-    WEBHOOK_HOST = get_external_ip()
+    NOTIFICATION_HOST = get_external_ip()

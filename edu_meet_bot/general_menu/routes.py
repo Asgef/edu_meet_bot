@@ -9,6 +9,7 @@ from aiohttp import web
 
 
 router = Router(name="edu_meet_bot")
+web_router  = web.RouteTableDef()
 
 
 @router.message(CommandStart())
@@ -51,23 +52,18 @@ async def get_about_massage(message: Message, bot=Bot):
 #           "Я помогу тебе к ЕГЭ по математике и информатике"
 #         )
 
+@web_router.post(settings.NOTIFICATION_PATH)
+async def notify_handler(request: web.Request):
+    bot: Bot = request.app['bot']
+    data = await request.json()
+    user_tg_id = data.get("tg_id")
+    message = data.get("message")
 
-async def webhook_handler(request: web.Request):
-    bot = request.app["bot"]
-    try:
-        data = await request.json()
-        tg_id = data.get("tg_id")
-        message = data.get("message")
-
-        # Проверяем, что данные не пустые
-        if not tg_id or not message:
-            return web.json_response(
-                {"error": "Invalid payload"}, status=400
-            )
-
-        # Отправляем сообщение в пользователю
-        await bot.send_message(chat_id=tg_id, text=message)
+    if user_tg_id and message:
+        await bot.send_message(user_tg_id, message)
         return web.json_response({"status": "ok"}, status=200)
-    except Exception as e:
-        logging.error(f"Ошибка обработки Webhook >>>>>>>>>>>>>>>> {e}")
-        return web.json_response({"error": str(e)}, status=500)
+    return web.json_response(
+        {"status": "error", "message": "Invalid data"}, status=400
+    )
+
+
