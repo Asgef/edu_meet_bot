@@ -6,8 +6,7 @@ from edu_meet_bot.support.routes import router as support_router
 from edu_meet_bot.sessions.routes import router as sessions_router
 from edu_meet_bot.registration.routes import router as registration_router
 from edu_meet_bot.general_menu.middleware import UserActivityMiddleware
-from edu_meet_bot.general_menu.routes import notify_handler, web_router
-from aiogram.webhook.aiohttp_server import SimpleRequestHandler
+from edu_meet_bot.general_menu.routes import web_router
 import asyncio
 from aiohttp import web
 

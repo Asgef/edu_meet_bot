@@ -30,4 +30,3 @@ NOTIFICATION_PATH = "/send_notification"
 NOTIFICATION_PORT = 9000
 
 ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS').split(' ')
-print(ALLOWED_HOSTS)

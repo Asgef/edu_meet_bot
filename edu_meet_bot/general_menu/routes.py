@@ -29,11 +29,6 @@ async def help(message: Message) -> None:
     await message.answer("Мои команды: /start, /help")
 
 
-# @router.message(F.text == "Записаться")
-# async def registration_menu(message: Message, bot=Bot):
-#     await message.answer("Заходи", reply_markup=lesson_registration_menu())
-
-
 @router.message(F.text == "О Нике")
 async def get_about_massage(message: Message, bot=Bot):
     photo_file: str = os.path.join(
@@ -60,6 +55,8 @@ async def notify_handler(request: web.Request):
     user_tg_id = data.get("tg_id")
     message = data.get("message")
 
+    # В данный момент эта проверка избыточна т.к. админ панель во внутренней
+    # сети
     if client_ip not in settings.ALLOWED_HOSTS:
         return web.json_response(
             {"status": "error", "message": "Invalid IP"}, status=400
@@ -71,5 +68,3 @@ async def notify_handler(request: web.Request):
     return web.json_response(
         {"status": "error", "message": "Invalid data"}, status=400
     )
-
-
