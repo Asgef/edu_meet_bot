@@ -29,5 +29,5 @@ SUPPORT_CHAT_ID = os.getenv('SUPPORT_CHAT_ID')
 NOTIFICATION_PATH = "/send_notification"
 NOTIFICATION_PORT = 9000
 
-if PRODUCTION:
-    NOTIFICATION_HOST = get_external_ip()
+ALLOWED_HOSTS = os.getenv('ALLOWED_HOSTS').split(' ')
+print(ALLOWED_HOSTS)

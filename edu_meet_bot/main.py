@@ -20,10 +20,10 @@ async def start_http_server(bot: Bot) -> None:
     app['bot'] = bot
     runner = web.AppRunner(app)
     await runner.setup()
-    site = web.TCPSite(runner, "0.0.0.0", settings.NOTIFICATION_PORT)
+    site = web.TCPSite(runner, "127.0.0.1", settings.NOTIFICATION_PORT)
     await site.start()
     logging.info(
-        f'>>>>>> HTTP server is running on http://0.0.0.0:'
+        f'>>>>>> HTTP server is running on http://127.0.0.1:'
         f'{settings.NOTIFICATION_PORT} <<<<<<'
     )
 

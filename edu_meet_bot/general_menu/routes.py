@@ -56,8 +56,14 @@ async def get_about_massage(message: Message, bot=Bot):
 async def notify_handler(request: web.Request):
     bot: Bot = request.app['bot']
     data = await request.json()
+    client_ip = request.remote
     user_tg_id = data.get("tg_id")
     message = data.get("message")
+
+    if client_ip not in settings.ALLOWED_HOSTS:
+        return web.json_response(
+            {"status": "error", "message": "Invalid IP"}, status=400
+        )
 
     if user_tg_id and message:
         await bot.send_message(user_tg_id, message)
