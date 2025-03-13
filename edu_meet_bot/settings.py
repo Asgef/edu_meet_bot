@@ -1,7 +1,6 @@
 import os
 from dotenv import load_dotenv
 from pathlib import Path
-from edu_meet_bot.utils import get_external_ip
 
 
 load_dotenv()

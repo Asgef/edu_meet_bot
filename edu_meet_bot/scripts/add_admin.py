@@ -11,6 +11,7 @@ parser.add_argument("id", type=int)
 
 
 async def add_admin(admin_id: int):
+    """Add a user as an admin by their ID."""
     async with async_session() as session:  # noqa
         try:
             await make_user_admin(admin_id)
@@ -21,7 +22,8 @@ async def add_admin(admin_id: int):
         print("Succesfully added user to admins")
 
 
-def main():
+def main():  # TODO: sync
+    """Parse arguments and run the add_admin coroutine."""
     admin_id = parser.parse_args().id
     asyncio.run(add_admin(admin_id))
 

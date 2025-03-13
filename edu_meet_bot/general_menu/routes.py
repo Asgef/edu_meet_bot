@@ -3,13 +3,13 @@ import os.path
 from edu_meet_bot import settings
 from aiogram import Router, F, Bot
 from aiogram.filters import CommandStart, Command
-from aiogram.types import Message, User, FSInputFile, ContentType
+from aiogram.types import Message, User, FSInputFile
 from edu_meet_bot.general_menu.keyboard import main_menu_view
 from aiohttp import web
 
 
 router = Router(name="edu_meet_bot")
-web_router  = web.RouteTableDef()
+web_router = web.RouteTableDef()
 
 
 @router.message(CommandStart())
