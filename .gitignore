@@ -1,8 +1,10 @@
 venv/
+.venv/
 dist/
 media_files/
 **/.idea/
 __pycache__/
+db_data/
 
 *.log
 *.whl
